@@ -1,0 +1,27 @@
+{
+  "_comment": "支持两种写法: 'interfaces': [...] 扁平; 或 'groups': [{name, interfaces}, ...] 嵌套两级",
+  "categories": [
+    {
+      "name": "开户进件类接口",
+      "groups": [
+        { "name": "拓客 SAAS", "interfaces": ["merchant_register", "file_upload", "open_merchant_info"] }
+      ]
+    },
+    {
+      "name": "支付交易类接口",
+      "groups": [
+        { "name": "扫码收单", "interfaces": ["trans_preorder"] }
+      ]
+    },
+    {
+      "name": "分账提现类接口",
+      "groups": []
+    },
+    {
+      "name": "附加功能类接口",
+      "groups": [
+        { "name": "营销活动", "interfaces": ["coupon_member_query"] }
+      ]
+    }
+  ]
+}

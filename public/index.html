@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拉卡拉调试工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/11.1.0/jsrsasign-all-min.js"></script>
+<style>
+  :root {
+    --bg: #fbf8f3; --card: #fff; --ink: #1a1815; --ink-soft: #5a5550;
+    --line: #e8e2d8; --line-strong: #d4cdbf;
+    --accent: #c84b1f; --accent-dark: #8f3414;
+    --ok: #2d6a4f; --warn: #b45309; --err: #b91c1c;
+    --code-bg: #f5f1e8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.55;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(200,75,31,.06), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(13,79,92,.05), transparent 50%);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 36px 24px 80px; }
+
+  header {
+    border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 24px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  h1 { font-family: "Noto Serif SC", serif; font-weight: 700; font-size: 28px; margin: 0; }
+  .header-meta { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-soft); }
+  .env-pill {
+    font-family: "JetBrains Mono", monospace; font-size: 11px;
+    padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line-strong);
+    background: var(--card); cursor: pointer; margin-left: 8px;
+  }
+  .env-pill.test { color: var(--accent); border-color: var(--accent); }
+  .env-pill.prod { color: var(--err); border-color: var(--err); background: #fef2f2; }
+
+  /* 模式切换 */
+  .mode-bar { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
+  .mode-btn {
+    padding: 12px 24px; border: none; background: none; cursor: pointer;
+    font-family: "Noto Serif SC", serif; font-size: 16px; color: var(--ink-soft);
+    border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all .15s;
+  }
+  .mode-btn:hover { color: var(--ink); }
+  .mode-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  .mode-btn .mode-desc { display: block; font-family: -apple-system, sans-serif; font-size: 11px; color: var(--ink-soft); font-weight: 400; margin-top: 2px; }
+  .mode-btn.active .mode-desc { color: var(--accent); }
+  .mode-panel { display: none; }
+  .mode-panel.active { display: block; }
+
+  /* 卡片 */
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 20px 22px; margin-bottom: 16px;
+  }
+  .card h2 {
+    font-family: "Noto Serif SC", serif; font-size: 17px; margin: 0 0 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card h2 .num {
+    font-family: "JetBrains Mono", monospace; background: var(--ink); color: var(--bg);
+    width: 24px; height: 24px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500;
+  }
+  .card .hint { color: var(--ink-soft); font-size: 13px; margin: 0 0 12px 34px; }
+
+  /* 表单元素 */
+  label {
+    display: block; font-size: 11px; color: var(--ink-soft);
+    font-family: "JetBrains Mono", monospace; text-transform: uppercase;
+    letter-spacing: .8px; margin-bottom: 4px; margin-top: 12px;
+  }
+  input[type="text"], textarea, select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 4px;
+    background: var(--card); color: var(--ink);
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,75,31,.12);
+  }
+  textarea { resize: vertical; line-height: 1.5; }
+  select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23999' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 200px; }
+
+  /* 按钮 */
+  .btn {
+    display: inline-block; padding: 7px 14px; border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--ink); font-family: inherit; font-size: 13px;
+    border-radius: 4px; cursor: pointer; transition: all .15s;
+  }
+  .btn:hover { background: var(--code-bg); border-color: var(--ink); }
+  .btn-primary {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+    font-size: 15px; padding: 12px 28px; font-weight: 500; letter-spacing: 1px;
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-primary:disabled { opacity: .5; cursor: wait; }
+  .btn-accent { color: var(--accent); border-color: var(--accent); }
+  .btn-accent:hover { background: var(--accent); color: var(--bg); }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .send-wrap { text-align: center; padding: 20px 0; }
+  .send-wrap .btn-primary {
+    font-family: "Noto Serif SC", serif; font-size: 17px;
+    padding: 14px 48px; letter-spacing: 4px;
+  }
+
+  /* 双栏 (body + 字段说明) */
+  .two-col { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+  .field-doc { background: var(--code-bg); border-radius: 4px; padding: 12px 14px; font-size: 12px; max-height: 480px; overflow-y: auto; }
+  .field-doc h3 { margin: 0 0 8px; font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .8px; font-family: "JetBrains Mono", monospace; }
+  .field-item { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+  .field-item:last-child { border: 0; }
+  .field-path { font-family: "JetBrains Mono", monospace; font-weight: 500; color: var(--accent-dark); font-size: 12px; }
+  .field-req { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 2px; margin-left: 4px; vertical-align: middle; }
+  .field-req.yes { background: var(--accent); color: white; }
+  .field-req.no  { background: var(--line-strong); color: var(--ink-soft); }
+  .field-desc { color: var(--ink-soft); font-size: 12px; margin-top: 2px; line-height: 1.5; }
+
+  /* 结果区 */
+  .result { display: none; }
+  .result.show { display: block; animation: fadeIn .3s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 16px; gap: 4px; }
+  .tab { padding: 9px 14px; cursor: pointer; border: none; background: none; color: var(--ink-soft); font-family: inherit; font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .kv { margin-bottom: 12px; }
+  .kv-label { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+  .kv-value { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--code-bg); padding: 9px 11px; border-radius: 4px; word-break: break-all; white-space: pre-wrap; border-left: 3px solid var(--line-strong); position: relative; }
+  .kv-value.mono-block { white-space: pre; overflow-x: auto; }
+  .kv-value.diff-line { padding-right: 60px; }
+
+  .badge { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 11px; padding: 3px 8px; border-radius: 3px; font-weight: 500; }
+  .badge-ok { background: #d6f5e3; color: var(--ok); }
+  .badge-warn { background: #fef3c7; color: var(--warn); }
+  .badge-err { background: #fee2e2; color: var(--err); }
+
+  .alert { padding: 11px 13px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 3px solid; }
+  .alert-warn { background: #fef9e7; border-color: var(--warn); color: #6b4515; }
+  .alert-err { background: #fef2f2; border-color: var(--err); color: var(--err); }
+  .alert-info { background: #eff6ff; border-color: #2563eb; color: #1e3a8a; }
+  .alert-ok { background: #f0fdf4; border-color: var(--ok); color: var(--ok); }
+
+  .copy-btn { float: right; font-size: 11px; padding: 2px 7px; background: var(--card); border: 1px solid var(--line-strong); border-radius: 3px; cursor: pointer; color: var(--ink-soft); font-family: inherit; }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  details summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); padding: 4px 0; user-select: none; }
+  details summary:hover { color: var(--accent); }
+
+  .footer { text-align: center; margin-top: 50px; color: var(--ink-soft); font-size: 12px; font-family: "JetBrains Mono", monospace; }
+
+  /* 诊断高亮 */
+  .lf-marker { color: var(--accent); font-weight: 700; }
+  .diag-result { padding: 16px; border-radius: 6px; margin-top: 16px; }
+  .diag-result.match { background: #f0fdf4; border: 1px solid var(--ok); }
+  .diag-result.mismatch { background: #fef2f2; border: 1px solid var(--err); }
+  .diag-line { font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 4px 0; }
+
+  /* 发送请求模式: 左侧目录树 + 右侧内容 */
+  .send-layout { display: grid; grid-template-columns: 270px 1fr; gap: 16px; align-items: flex-start; }
+  @media (max-width: 900px) { .send-layout { grid-template-columns: 1fr; } }
+  .sidebar {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 12px; position: sticky; top: 16px;
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  @media (max-width: 900px) { .sidebar { position: static; max-height: 320px; } }
+  .sidebar-search { margin-bottom: 8px; }
+  .sidebar-search input {
+    width: 100%; padding: 6px 9px; font-size: 12px;
+    border: 1px solid var(--line-strong); border-radius: 4px;
+    font-family: inherit; background: var(--bg);
+  }
+  .sidebar-search input:focus { outline: none; border-color: var(--accent); }
+
+  .tree-cat {
+    font-family: "Noto Serif SC", serif; font-size: 14px; font-weight: 700;
+    padding: 7px 4px; cursor: pointer; user-select: none; color: var(--ink);
+    display: flex; align-items: center; gap: 6px;
+    border-top: 1px solid var(--line);
+  }
+  .tree-cat:first-child { border-top: 0; }
+  .tree-cat:hover { color: var(--accent); }
+  .tree-cat .caret { font-size: 10px; transition: transform .15s; color: var(--ink-soft); display: inline-block; width: 10px; }
+  .tree-cat.collapsed .caret { transform: rotate(-90deg); }
+  .tree-cat.empty { color: var(--ink-soft); cursor: default; opacity: .55; }
+  .tree-cat.empty .caret { visibility: hidden; }
+  .tree-cat-count {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    color: var(--ink-soft); margin-left: auto; font-weight: 400;
+    background: var(--code-bg); padding: 1px 6px; border-radius: 8px;
+  }
+  .tree-cat.empty .tree-cat-count { background: transparent; }
+
+  .tree-group {
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    font-size: 12px; font-weight: 600; color: var(--ink-soft);
+    padding: 4px 4px 4px 16px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 4px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .tree-group:hover { color: var(--accent); }
+  .tree-group .caret { font-size: 9px; transition: transform .15s; display: inline-block; width: 9px; }
+  .tree-group.collapsed .caret { transform: rotate(-90deg); }
+
+  .tree-item {
+    font-size: 13px; padding: 5px 8px 5px 22px; cursor: pointer; border-radius: 4px;
+    color: var(--ink); transition: background .12s; line-height: 1.35;
+    margin: 1px 0;
+  }
+  .tree-item.in-group { padding-left: 32px; }
+  .tree-item:hover { background: var(--code-bg); }
+  .tree-item.active { background: var(--accent); color: white; font-weight: 500; }
+  .tree-item .item-id {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    opacity: .65; display: block; margin-top: 1px;
+  }
+  .tree-item.active .item-id { opacity: .9; }
+
+  .tree-children.collapsed { display: none; }
+  .tree-empty-note { padding: 6px 8px 6px 22px; color: var(--ink-soft); font-size: 11px; font-style: italic; }
+  .tree-no-match { padding: 12px 8px; color: var(--ink-soft); font-size: 12px; text-align: center; font-style: italic; }
+
+  /* 当前接口信息条 */
+  .iface-info-strip {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 12px 16px; margin-bottom: 16px;
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  }
+  .iface-info-strip .iface-name {
+    font-family: "Noto Serif SC", serif; font-size: 17px; font-weight: 700;
+  }
+  .iface-info-strip .iface-desc { width: 100%; color: var(--ink-soft); font-size: 13px; }
+  .iface-info-strip .iface-url {
+    width: 100%; font-family: "JetBrains Mono", monospace; font-size: 11px;
+    color: var(--ink-soft); word-break: break-all;
+  }
+  .no-iface-hint {
+    background: var(--card); border: 1px dashed var(--line-strong); border-radius: 6px;
+    padding: 40px 20px; text-align: center; color: var(--ink-soft); margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>拉卡拉调试工具</h1>
+    <div class="header-meta">SHA256withRSA · 加签 / 验签 / 字段诊断</div>
+  </div>
+  <div>
+    环境:
+    <select id="envSelect" class="env-pill" onchange="onEnvChange()">
+      <option value="test">测试环境</option>
+      <option value="prod">生产环境</option>
+    </select>
+  </div>
+</header>
+
+<!-- 模式切换 -->
+<div class="mode-bar">
+  <button class="mode-btn active" onclick="switchMode(event,'mode-send')">发送请求<span class="mode-desc">填参数 · 自动签名 · 一键发送</span></button>
+  <button class="mode-btn" onclick="switchMode(event,'mode-diag')">诊断签名<span class="mode-desc">您自己签的对不对? 工具帮您找问题</span></button>
+  <button class="mode-btn" onclick="switchMode(event,'mode-verify')">验证响应<span class="mode-desc">收到的响应签名是不是真的?</span></button>
+  <button class="mode-btn" onclick="switchMode(event,'mode-sm4')">国密加解密<span class="mode-desc">SM4/ECB/PKCS5 单字段或整报文</span></button>
+</div>
+
+<!-- ======== 模式 1: 发送请求 ======== -->
+<div class="mode-panel active" id="mode-send">
+  <div class="send-layout">
+
+    <!-- 左侧目录树 -->
+    <aside class="sidebar">
+      <div class="sidebar-search">
+        <input type="text" id="ifaceSearch" placeholder="搜索接口名 / ID..." oninput="filterTree()">
+      </div>
+      <div id="ifaceTree"></div>
+    </aside>
+
+    <!-- 右侧主内容 -->
+    <div class="send-main">
+
+      <!-- 当前接口信息条 (选中接口时显示) -->
+      <div class="iface-info-strip" id="ifaceInfo" style="display:none;">
+        <span class="iface-name" id="ifaceName"></span>
+        <span class="badge badge-warn" id="ifaceCategory"></span>
+        <div class="iface-desc" id="ifaceDesc"></div>
+        <div class="iface-url">URL: <span id="ifaceUrl"></span></div>
+      </div>
+      <div class="no-iface-hint" id="noIfaceHint">← 请从左侧目录选择一个接口</div>
+
+      <!-- 接入参数 -->
+      <div class="card">
+        <h2><span class="num">1</span>接入参数</h2>
+        <p class="hint">默认填入测试环境参数，可直接使用。</p>
+        <div class="row">
+          <div><label>App ID</label><input type="text" id="appId" value="OP00000003"></div>
+          <div><label>证书序列号</label><input type="text" id="serialNo" value="00dfba8194c41b84cf"></div>
+        </div>
+        <label>SM4 密钥 (Base64, 16 字节解码后) — 仅当接口需要 SM4 加密时使用</label>
+        <input type="text" id="sm4Key" value="LHo55AjrT4aDhAIBZhb5KQ==" placeholder="示例: LHo55AjrT4aDhAIBZhb5KQ==">
+        <div id="sm4Hint" class="alert alert-info" style="margin-top:8px; display:none;">
+          <strong>当前接口涉及 SM4 加密：</strong><span id="sm4HintDetail"></span>
+        </div>
+      </div>
+
+      <!-- 私钥 -->
+      <div class="card">
+        <h2><span class="num">2</span>商户私钥</h2>
+        <p class="hint">商户自己保管的私钥，用来对请求签名。私钥仅在浏览器内使用，不会上传到任何服务器。</p>
+        <textarea id="privateKey" rows="6" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"></textarea>
+        <div class="btn-row">
+          <input type="file" id="keyFile" accept=".txt,.pem,.key" style="display:none" onchange="loadKeyFile(event,'privateKey')">
+          <button class="btn" onclick="document.getElementById('keyFile').click()">📂 选择文件</button>
+          <button class="btn btn-accent" onclick="fillDemoKey('privateKey')">填入测试私钥</button>
+          <button class="btn" onclick="document.getElementById('privateKey').value=''">清空</button>
+        </div>
+      </div>
+
+      <!-- 请求体 + 字段说明 -->
+      <div class="card">
+        <h2><span class="num">3</span>请求报文 (Body)</h2>
+        <p class="hint">右侧字段说明随接口选择同步更新。</p>
+        <div class="two-col">
+          <div>
+            <textarea id="reqBody" rows="18"></textarea>
+            <div class="btn-row">
+              <button class="btn" onclick="formatJson('reqBody')">格式化 JSON</button>
+              <button class="btn" onclick="loadExampleBody()">恢复示例</button>
+              <button class="btn" id="newOrderBtn" onclick="newOrderNo()">刷新动态字段</button>
+            </div>
+          </div>
+          <div class="field-doc" id="fieldDoc">
+            <h3>字段说明</h3>
+            <div id="fieldDocBody">选择接口后显示</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 发送 -->
+      <div class="send-wrap">
+        <button class="btn btn-primary" id="sendBtn" onclick="sendRequest()">发 送 请 求</button>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--ink-soft);">
+          <label style="cursor: pointer; user-select: none;">
+            <input type="checkbox" id="rawSendChk" style="vertical-align: -2px; margin-right: 4px;">
+            原样发送（不自动刷新流水号 / 时间戳, 用于测幂等或排查问题）
+          </label>
+        </div>
+      </div>
+
+      <!-- 结果 -->
+      <div class="card result" id="resultCard">
+        <h2><span class="num">4</span>结果</h2>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab(event,'tab-resp')">响应</button>
+          <button class="tab" onclick="switchTab(event,'tab-sign')">签名详情</button>
+          <button class="tab" onclick="switchTab(event,'tab-curl')">等价 curl</button>
+        </div>
+        <div class="tab-content active" id="tab-resp"><div id="respBox"></div></div>
+        <div class="tab-content" id="tab-sign"><div id="signBox"></div></div>
+        <div class="tab-content" id="tab-curl">
+          <div class="alert alert-info">把下面的命令复制到终端运行也能拿到响应。</div>
+          <div class="kv"><div class="kv-label">curl (macOS / Linux / Git Bash)</div><div class="kv-value mono-block" id="curlCmd"></div></div>
+          <div class="kv"><div class="kv-label">PowerShell (Windows)</div><div class="kv-value mono-block" id="psCmd"></div></div>
+        </div>
+      </div>
+
+    </div><!-- /send-main -->
+  </div><!-- /send-layout -->
+</div><!-- /mode-send -->
+
+<!-- ======== 模式 2: 诊断签名 ======== -->
+<div class="mode-panel" id="mode-diag">
+  <div class="card">
+    <h2><span class="num">★</span>签名诊断</h2>
+    <p class="hint">您自己代码签出的签名跟我们对不上? 把您实际用的输入贴进来, 工具用同样的输入再签一次, 告诉您差在哪。</p>
+
+    <div class="row">
+      <div><label>App ID</label><input type="text" id="diagAppId" value="OP00000003"></div>
+      <div><label>证书序列号</label><input type="text" id="diagSerialNo" value="00dfba8194c41b84cf"></div>
+    </div>
+    <div class="row">
+      <div><label>Timestamp (秒)</label><input type="text" id="diagTimestamp" placeholder="您实际用的 timestamp"></div>
+      <div><label>Nonce Str (12位)</label><input type="text" id="diagNonceStr" placeholder="您实际用的 nonce_str"></div>
+    </div>
+
+    <label>请求 Body (您实际签的字节, 一字不差)</label>
+    <textarea id="diagBody" rows="6" placeholder='{"req_time":"...","version":"3.0",...}'></textarea>
+
+    <label>商户私钥</label>
+    <textarea id="diagPriv" rows="5" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-accent" onclick="fillDemoKey('diagPriv')">填入测试私钥</button>
+    </div>
+
+    <label>您自己代码算出的签名 (Base64)</label>
+    <textarea id="diagYourSig" rows="3" placeholder="您程序输出的签名值, 粘贴这里"></textarea>
+
+    <div class="btn-row" style="margin-top: 16px;">
+      <button class="btn btn-primary" onclick="runDiagnose()">开 始 诊 断</button>
+    </div>
+
+    <div id="diagResult"></div>
+  </div>
+</div>
+
+<!-- ======== 模式 3: 验证响应 ======== -->
+<div class="mode-panel" id="mode-verify">
+  <div class="card">
+    <h2><span class="num">★</span>响应验签</h2>
+    <p class="hint">拉卡拉给您的响应签名验证。粘贴响应头和响应体, 工具用拉卡拉公钥证书验签。</p>
+
+    <label>响应头 (一行一对, 格式: Key: Value)</label>
+    <textarea id="verifyHeaders" rows="6" placeholder="Lklapi-Appid: OP00000003&#10;Lklapi-Serial: 1752b7386f8&#10;Lklapi-Timestamp: 1621690669&#10;Lklapi-Nonce: 9rmDjEJRTcbn&#10;Lklapi-Signature: WW7DPS9YWkZ..."></textarea>
+
+    <label>响应体 (原始字节, 不要格式化)</label>
+    <textarea id="verifyBody" rows="6" placeholder='{"code":"BBS00000","msg":"成功",...}'></textarea>
+
+    <label>拉卡拉公钥证书 (默认已内嵌测试环境证书,如使用其他证书可替换)</label>
+    <textarea id="verifyCert" rows="5"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-accent" onclick="resetVerifyCert()">恢复默认测试环境证书</button>
+    </div>
+
+    <div class="btn-row" style="margin-top: 16px;">
+      <button class="btn btn-primary" onclick="runVerify()">开 始 验 签</button>
+    </div>
+
+    <div id="verifyResult"></div>
+  </div>
+</div>
+
+<!-- ======== 模式 4: 国密加解密 ======== -->
+<div class="mode-panel" id="mode-sm4">
+  <div class="card">
+    <h2><span class="num">★</span>SM4 加解密工具</h2>
+    <p class="hint">SM4/ECB/PKCS5Padding。可单独验证您代码里的 SM4 加解密结果。密钥/明文/密文都不会上传到服务器。</p>
+
+    <label>SM4 密钥 (Base64 编码, 解码后必须 16 字节)</label>
+    <input type="text" id="sm4ToolKey" value="LHo55AjrT4aDhAIBZhb5KQ==" placeholder="LHo55AjrT4aDhAIBZhb5KQ==">
+
+    <div class="row" style="margin-top: 12px;">
+      <div>
+        <label>操作</label>
+        <select id="sm4ToolMode">
+          <option value="encrypt">加密 (明文 → Base64 密文)</option>
+          <option value="decrypt">解密 (Base64 密文 → 明文)</option>
+        </select>
+      </div>
+    </div>
+
+    <label>输入 (加密填明文 / 解密填 Base64 密文)</label>
+    <textarea id="sm4ToolInput" rows="8" placeholder='加密示例: {"req_time":"...","req_data":{...}}&#10;解密示例: 已加密的 Base64 字符串'></textarea>
+
+    <div class="btn-row" style="margin-top: 16px;">
+      <button class="btn btn-primary" onclick="runSm4Tool()">执 行</button>
+      <button class="btn" onclick="document.getElementById('sm4ToolInput').value=''">清空输入</button>
+      <button class="btn btn-accent" onclick="fillSm4DocSample()">填入文档示例</button>
+    </div>
+
+    <div id="sm4ToolResult"></div>
+  </div>
+</div>
+
+<div class="footer">
+  本工具运行在浏览器内，私钥/SM4 密钥不会上传到服务器。 ·
+  代理仅做请求转发。 · 测试环境用
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ==================== 常量 ====================
+const PROXY_PATH = '/api/proxy';
+
+const LKL_PUB_CERT_TEST = `-----BEGIN CERTIFICATE-----
+MIIEMTCCAxmgAwIBAgIGAXRTgcMnMA0GCSqGSIb3DQEBCwUAMHYxCzAJBgNVBAYT
+AkNOMRAwDgYDVQQIDAdCZWlKaW5nMRAwDgYDVQQHDAdCZWlKaW5nMRcwFQYDVQQK
+DA5MYWthbGEgQ28uLEx0ZDEqMCgGA1UEAwwhTGFrYWxhIE9yZ2FuaXphdGlvbiBW
+YWxpZGF0aW9uIENBMB4XDTIwMTAxMDA1MjQxNFoXDTMwMTAwODA1MjQxNFowZTEL
+MAkGA1UEBhMCQ04xEDAOBgNVBAgMB0JlaUppbmcxEDAOBgNVBAcMB0JlaUppbmcx
+FzAVBgNVBAoMDkxha2FsYSBDby4sTHRkMRkwFwYDVQQDDBBBUElHVy5MQUtBTEEu
+Q09NMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt1zHL54HiI8d2sLJ
+lwoQji3/ln0nsvfZ/XVpOjuB+1YR6/0LdxEDMC/hxI6iH2Rm5MjwWz3dmN/6BZeI
+gwGeTOWJUZFARo8UduKrlhC6gWMRpAiiGC8wA8stikc5gYB+UeFVZi/aJ0WN0cpP
+JYCvPBhxhMvhVDnd4hNohnR1L7k0ypuWg0YwGjC25FaNAEFBYP9EYUyCJjE//9Z7
+sMzHR9SJYCqqo6r9bOH9G6sWKuEp+osuAh+kJIxJMHfipw7w3tEcWG0hce9u/el4
+cYJtg8/PPMVoccKmeCzMvarr7jdKP4lenJbtwlgyfs+JgNu60KMUJH8RS72wC9NY
+uFz09wIDAQABo4HVMIHSMIGSBgNVHSMEgYowgYeAFCnH4DkZPR6CZxRn/kIqVsMo
+dJHpoWekZTBjMQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpSmluZzEQMA4GA1UE
+BwwHQmVpSmluZzEXMBUGA1UECgwOTGFrYWxhIENvLixMdGQxFzAVBgNVBAMMDkxh
+a2FsYSBSb290IENBggYBaiUALIowHQYDVR0OBBYEFJ2Kx9YZfmWpkKFnC33C0r5D
+K3rFMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUA
+A4IBAQBZoeU0XyH9O0LGF9R+JyGwfU/O5amoB97VeM+5n9v2z8OCiIJ8eXVGKN9L
+tl9QkpTEanYwK30KkpHcJP1xfVkhPi/cCMgfTWQ5eKYC7Zm16zk7n4CP6IIgZIqm
+TVGsIGKk8RzWseyWPB3lfqMDR52V1tdA1S8lJ7a2Xnpt5M2jkDXoArl3SVSwCb4D
+AmThYhak48M++fUJNYII9JBGRdRGbfJ2GSFdPXgesUL2CwlReQwbW4GZkYGOg9LK
+CNPK6XShlNdvgPv0CCR08KCYRwC3HZ0y1F0NjaKzYdGNPrvOq9lA495ONZCvzYDo
+gmsu/kd6eqxTs/JwdaIYr4sCMg8Z
+-----END CERTIFICATE-----`;
+
+const DEMO_PRIV_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDvDBZyHUDndAGx
+rIcsCV2njhNO3vCEZotTaWYSYwtDvkcAb1EjsBFabXZaKigpqFXk5XXNI3NIHP9M
+8XKzIgGvc65NpLAfRjVql8JiTvLyYd1gIUcOXMInabu+oX7dQSI1mS8XzqaoVRhD
+ZQWhXcJW9bxMulgnzvk0Ggw07AjGF7si+hP/Va8SJmN7EJwfQq6TpSxR+WdIHpbW
+dhZ+NHwitnQwAJTLBFvfk28INM39G7XOsXdVLfsooFdglVTOHpNuRiQAj9gShCCN
+rpGsNQxDiJIxE43qRsNsRwigyo6DPJk/klgDJa417E2wgP8VrwiXparO4FMzOGK1
+5quuoD7DAgMBAAECggEBANhmWOt1EAx3OBFf3f4/fEjylQgRSiqRqg8Ymw6KGuh4
+mE4Md6eW/B6geUOmZjVP7nIIR1wte28M0REWgn8nid8LGf+v1sB5DmIwgAf+8G/7
+qCwd8/VMg3aqgQtRp0ckb5OV2Mv0h2pbnltkWHR8LDIMwymyh5uCApbn/aTrCAZK
+NXcPOyAn9tM8Bu3FHk3Pf24Er3SN+bnGxgpzDrFjsDSHjDFT9UMIc2WdA3tuMv9X
+3DDn0bRCsHnsIw3WrwY6HQ8mumdbURk+2Ey3eRFfMYxyS96kOgBC2hqZOlDwVPAK
+TPtS4hoq+cQ0sRaJQ4T0UALJrBVHa+EESgRaTvrXqAECgYEA+WKmy9hcvp6IWZlk
+9Q1JZ+dgIVxrO65zylK2FnD1/vcTx2JMn73WKtQb6vdvTuk+Ruv9hY9PEsf7S8gH
+STTmzHOUgo5x0F8yCxXFnfji2juoUnDdpkjtQK5KySDcpQb5kcCJWEVi9v+zObM0
+Zr1Nu5/NreE8EqUl3+7MtHOu1TMCgYEA9WM9P6m4frHPW7h4gs/GISA9LuOdtjLv
+AtgCK4cW2mhtGNAMttD8zOBQrRuafcbFAyU9de6nhGwetOhkW9YSV+xRNa7HWTeI
+RgXJuJBrluq5e1QGTIwZU/GujpNaR4Qiu0B8TodM/FME7htsyxjmCwEfT6SDYlke
+MzTbMa9Q0DECgYBqsR/2+dvD2YMwAgZFKKgNAdoIq8dcwyfamUQ5mZ5EtGQL2yw4
+8zibHh/LiIxgUD1Kjk/qQgNsX45NP4iOc0mCkrgomtRqdy+rumbPTNmQ0BEVJCBP
+scd+8pIgNiTvnWpMRvj7gMP0NDTzLI3wnnCRIq8WAtR2jZ0Ejt+ZHBziLQKBgQDi
+bEe/zqNmhDuJrpXEXmO7fTv3YB/OVwEj5p1Z/LSho2nHU3Hn3r7lbLYEhUvwctCn
+Ll2fzC7Wic1rsGOqOcWDS5NDrZpUQGGF+yE/JEOiZcPwgH+vcjaMtp0TAfRzuQEz
+NzV8YGwxB4mtC7E/ViIuVULHAk4ZGZI8PbFkDxjKgQKBgG8jEuLTI1tsP3kyaF3j
+Aylnw7SkBc4gfe9knsYlw44YlrDSKr8AOp/zSgwvMYvqT+fygaJ3yf9uIBdrIilq
+CHKXccZ9uA/bT5JfIi6jbg3EoE9YhB0+1aGAS1O2dBvUiD8tJ+BjAT4OB0UDpmM6
+QsFLQgFyXgvDnzr/o+hQJelW
+-----END PRIVATE KEY-----`;
+
+// ==================== SM4 (国密算法 GM/T 0002-2012) ====================
+// SM4/ECB/PKCS5Padding，密钥 base64 解码后 16 字节，密文 base64 输出
+// 自检: GM/T 0002-2012 标准向量 0123456789abcdeffedcba9876543210 → 681edf34d206965e86b3e94f536e4246
+const SM4 = (function() {
+  const Sbox = new Uint8Array([
+    0xd6,0x90,0xe9,0xfe,0xcc,0xe1,0x3d,0xb7,0x16,0xb6,0x14,0xc2,0x28,0xfb,0x2c,0x05,
+    0x2b,0x67,0x9a,0x76,0x2a,0xbe,0x04,0xc3,0xaa,0x44,0x13,0x26,0x49,0x86,0x06,0x99,
+    0x9c,0x42,0x50,0xf4,0x91,0xef,0x98,0x7a,0x33,0x54,0x0b,0x43,0xed,0xcf,0xac,0x62,
+    0xe4,0xb3,0x1c,0xa9,0xc9,0x08,0xe8,0x95,0x80,0xdf,0x94,0xfa,0x75,0x8f,0x3f,0xa6,
+    0x47,0x07,0xa7,0xfc,0xf3,0x73,0x17,0xba,0x83,0x59,0x3c,0x19,0xe6,0x85,0x4f,0xa8,
+    0x68,0x6b,0x81,0xb2,0x71,0x64,0xda,0x8b,0xf8,0xeb,0x0f,0x4b,0x70,0x56,0x9d,0x35,
+    0x1e,0x24,0x0e,0x5e,0x63,0x58,0xd1,0xa2,0x25,0x22,0x7c,0x3b,0x01,0x21,0x78,0x87,
+    0xd4,0x00,0x46,0x57,0x9f,0xd3,0x27,0x52,0x4c,0x36,0x02,0xe7,0xa0,0xc4,0xc8,0x9e,
+    0xea,0xbf,0x8a,0xd2,0x40,0xc7,0x38,0xb5,0xa3,0xf7,0xf2,0xce,0xf9,0x61,0x15,0xa1,
+    0xe0,0xae,0x5d,0xa4,0x9b,0x34,0x1a,0x55,0xad,0x93,0x32,0x30,0xf5,0x8c,0xb1,0xe3,
+    0x1d,0xf6,0xe2,0x2e,0x82,0x66,0xca,0x60,0xc0,0x29,0x23,0xab,0x0d,0x53,0x4e,0x6f,
+    0xd5,0xdb,0x37,0x45,0xde,0xfd,0x8e,0x2f,0x03,0xff,0x6a,0x72,0x6d,0x6c,0x5b,0x51,
+    0x8d,0x1b,0xaf,0x92,0xbb,0xdd,0xbc,0x7f,0x11,0xd9,0x5c,0x41,0x1f,0x10,0x5a,0xd8,
+    0x0a,0xc1,0x31,0x88,0xa5,0xcd,0x7b,0xbd,0x2d,0x74,0xd0,0x12,0xb8,0xe5,0xb4,0xb0,
+    0x89,0x69,0x97,0x4a,0x0c,0x96,0x77,0x7e,0x65,0xb9,0xf1,0x09,0xc5,0x6e,0xc6,0x84,
+    0x18,0xf0,0x7d,0xec,0x3a,0xdc,0x4d,0x20,0x79,0xee,0x5f,0x3e,0xd7,0xcb,0x39,0x48
+  ]);
+  const FK = [0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc];
+  const CK = [
+    0x00070e15,0x1c232a31,0x383f464d,0x545b6269,0x70777e85,0x8c939aa1,0xa8afb6bd,0xc4cbd2d9,
+    0xe0e7eef5,0xfc030a11,0x181f262d,0x343b4249,0x50575e65,0x6c737a81,0x888f969d,0xa4abb2b9,
+    0xc0c7ced5,0xdce3eaf1,0xf8ff060d,0x141b2229,0x30373e45,0x4c535a61,0x686f767d,0x848b9299,
+    0xa0a7aeb5,0xbcc3cad1,0xd8dfe6ed,0xf4fb0209,0x10171e25,0x2c333a41,0x484f565d,0x646b7279
+  ];
+  const rotl = (x,n) => ((x<<n)|(x>>>(32-n)))>>>0;
+  const tau  = a => ((Sbox[(a>>>24)&0xff]<<24)|(Sbox[(a>>>16)&0xff]<<16)|(Sbox[(a>>>8)&0xff]<<8)|Sbox[a&0xff])>>>0;
+  const L    = b => (b ^ rotl(b,2) ^ rotl(b,10) ^ rotl(b,18) ^ rotl(b,24)) >>> 0;
+  const Lp   = b => (b ^ rotl(b,13) ^ rotl(b,23)) >>> 0;
+  const T    = x => L(tau(x));
+  const Tp   = x => Lp(tau(x));
+  const b2w  = (b,o) => ((b[o]<<24)|(b[o+1]<<16)|(b[o+2]<<8)|b[o+3])>>>0;
+  function w2b(w,b,o){ b[o]=(w>>>24)&0xff; b[o+1]=(w>>>16)&0xff; b[o+2]=(w>>>8)&0xff; b[o+3]=w&0xff; }
+
+  function expandKey(k) {
+    const K = new Array(36), rk = new Array(32);
+    for (let i = 0; i < 4; i++) K[i] = (b2w(k, i*4) ^ FK[i]) >>> 0;
+    for (let i = 0; i < 32; i++) {
+      K[i+4] = (K[i] ^ Tp((K[i+1] ^ K[i+2] ^ K[i+3] ^ CK[i]) >>> 0)) >>> 0;
+      rk[i] = K[i+4];
+    }
+    return rk;
+  }
+  function cryptBlock(blk, rk) {
+    const X = new Array(36);
+    for (let i = 0; i < 4; i++) X[i] = b2w(blk, i*4);
+    for (let i = 0; i < 32; i++) X[i+4] = (X[i] ^ T((X[i+1] ^ X[i+2] ^ X[i+3] ^ rk[i]) >>> 0)) >>> 0;
+    const o = new Uint8Array(16);
+    w2b(X[35],o,0); w2b(X[34],o,4); w2b(X[33],o,8); w2b(X[32],o,12);
+    return o;
+  }
+  function pkcs7Pad(b) {
+    const p = 16 - (b.length % 16);
+    const o = new Uint8Array(b.length + p);
+    o.set(b); for (let i = b.length; i < o.length; i++) o[i] = p;
+    return o;
+  }
+  function pkcs7Unpad(b) {
+    const p = b[b.length - 1];
+    if (p < 1 || p > 16) throw new Error('PKCS5/7 padding 异常 (尾字节 ' + p + ')');
+    for (let i = b.length - p; i < b.length; i++) {
+      if (b[i] !== p) throw new Error('PKCS5/7 padding 校验失败');
+    }
+    return b.slice(0, b.length - p);
+  }
+  function b64ToBytes(b64) {
+    const bin = atob(b64);
+    const o = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) o[i] = bin.charCodeAt(i);
+    return o;
+  }
+  function bytesToB64(b) {
+    let s = '';
+    for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s);
+  }
+  function getKeyBytes(keyB64) {
+    let k;
+    try { k = b64ToBytes(keyB64); }
+    catch (e) { throw new Error('SM4 密钥不是合法的 Base64'); }
+    if (k.length !== 16) throw new Error('SM4 密钥 Base64 解码后应为 16 字节，实际 ' + k.length + ' 字节');
+    return k;
+  }
+
+  function encrypt(keyB64, plainStr) {
+    const k = getKeyBytes(keyB64);
+    const data = new TextEncoder().encode(plainStr);
+    const padded = pkcs7Pad(data);
+    const rk = expandKey(k);
+    const out = new Uint8Array(padded.length);
+    for (let i = 0; i < padded.length; i += 16) {
+      out.set(cryptBlock(padded.slice(i, i+16), rk), i);
+    }
+    return bytesToB64(out);
+  }
+  function decrypt(keyB64, cipherB64) {
+    const k = getKeyBytes(keyB64);
+    let c;
+    try { c = b64ToBytes(cipherB64); }
+    catch (e) { throw new Error('密文不是合法的 Base64'); }
+    if (c.length === 0 || c.length % 16 !== 0) throw new Error('密文字节数应为 16 的倍数，实际 ' + c.length);
+    const rk = expandKey(k).slice().reverse();
+    const out = new Uint8Array(c.length);
+    for (let i = 0; i < c.length; i += 16) {
+      out.set(cryptBlock(c.slice(i, i+16), rk), i);
+    }
+    return new TextDecoder('utf-8').decode(pkcs7Unpad(out));
+  }
+
+  // 自检（页面加载时跑一次, 失败会在 console 报警, 不打断 UI）
+  try {
+    const tk = new Uint8Array([0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,0xfe,0xdc,0xba,0x98,0x76,0x54,0x32,0x10]);
+    const tp = tk;
+    let h = '';
+    for (const x of cryptBlock(tp, expandKey(tk))) h += x.toString(16).padStart(2,'0');
+    if (h !== '681edf34d206965e86b3e94f536e4246') {
+      console.error('[SM4 self-test FAILED] expected 681edf34d206965e86b3e94f536e4246, got', h);
+    } else {
+      console.log('[SM4 self-test OK] GM/T 0002-2012 vector matches');
+    }
+  } catch (e) { console.error('[SM4 self-test ERROR]', e); }
+
+  return { encrypt, decrypt };
+})();
+
+// ==================== 内嵌 schema (file:// 离线打开 / 服务转发失败时的后备) ====================
+// 服务正常时优先从 schemas/*.json 加载, 失败才用这里
+const INLINE_SCHEMAS_INDEX = {
+  "categories": [
+    {
+      "name": "开户进件类接口",
+      "groups": [
+        { "name": "拓客 SAAS", "interfaces": ["merchant_register", "file_upload", "open_merchant_info"] }
+      ]
+    },
+    {
+      "name": "支付交易类接口",
+      "groups": [
+        { "name": "扫码收单", "interfaces": ["trans_preorder"] }
+      ]
+    },
+    { "name": "分账提现类接口", "groups": [] },
+    {
+      "name": "附加功能类接口",
+      "groups": [
+        { "name": "营销活动", "interfaces": ["coupon_member_query"] }
+      ]
+    }
+  ]
+};
+const INLINE_SCHEMAS = {
+  "trans_preorder": {
+    "id": "trans_preorder", "category": "支付交易类接口", "name": "交易预下单",
+    "description": "商户下单后获取支付参数，调起支付。支持支付宝、微信、云闪付等支付方式。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/preorder",
+    "url_prod": "https://s2.lakala.com/api/v3/labs/trans/preorder",
+    "doc_url": "https://o.lakala.com",
+    "fields": [
+      { "path": "version", "type": "string", "required": true, "desc": "接口版本号，固定 3.0" },
+      { "path": "req_time", "type": "string", "required": true, "desc": "请求时间，格式 yyyyMMddHHmmss (发送时工具自动填充)" },
+      { "path": "req_data.merchant_no", "type": "string", "required": true, "desc": "拉卡拉分配的商户号" },
+      { "path": "req_data.term_no", "type": "string", "required": true, "desc": "拉卡拉分配的终端号" },
+      { "path": "req_data.out_trade_no", "type": "string", "required": true, "desc": "商户系统内的订单号，需保证唯一" },
+      { "path": "req_data.account_type", "type": "string", "required": true, "desc": "账户类型：ALIPAY=支付宝, WECHAT=微信, UNIONPAY=云闪付" },
+      { "path": "req_data.trans_type", "type": "string", "required": true, "desc": "交易类型：41=主扫(用户扫商户码), 47=被扫(商户扫用户码)" },
+      { "path": "req_data.total_amount", "type": "number", "required": true, "desc": "交易金额，单位：分" },
+      { "path": "req_data.notify_url", "type": "string", "required": false, "desc": "异步通知地址，交易结果会 POST 到这里" },
+      { "path": "req_data.subject", "type": "string", "required": false, "desc": "商品标题/订单标题" },
+      { "path": "req_data.location_info.request_ip", "type": "string", "required": false, "desc": "用户终端 IP" },
+      { "path": "req_data.location_info.location", "type": "string", "required": false, "desc": "用户终端地理位置，格式 +纬度/+经度" }
+    ],
+    "example": {
+      "req_time": "{{req_time}}", "version": "3.0",
+      "req_data": {
+        "merchant_no": "82229007392000A", "term_no": "D9296400",
+        "out_trade_no": "{{out_trade_no}}", "account_type": "ALIPAY",
+        "trans_type": "41", "total_amount": 1,
+        "notify_url": "http://example.com/notify",
+        "location_info": { "request_ip": "192.168.1.1", "location": "+23.137208/+113.381982" },
+        "subject": "测试订单"
+      }
+    }
+  },
+  "coupon_member_query": {
+    "id": "coupon_member_query", "category": "附加功能类接口",
+    "name": "营销活动会员查询 (SM4 加密样例)",
+    "description": "示例接口，演示 SM4 整报文加密。req_data 字段在请求时整体 SM4 加密，响应的 resp_data 也是 SM4 加密。注意：URL 为占位，按您拿到的接口文档替换。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/coupon/activity/member/query",
+    "url_prod": "https://s2.lakala.com/api/v3/labs/coupon/activity/member/query",
+    "doc_url": "https://o.lakala.com",
+    "encrypt": {
+      "request":  { "mode": "all", "path": "req_data" },
+      "response": { "mode": "all", "path": "resp_data" }
+    },
+    "fields": [
+      { "path": "version",  "type": "string", "required": true,  "desc": "接口版本号，固定 3.0" },
+      { "path": "req_time", "type": "string", "required": true,  "desc": "请求时间，yyyyMMddHHmmss (工具自动填)" },
+      { "path": "req_id",   "type": "string", "required": true,  "desc": "请求流水号 (工具自动填)" },
+      { "path": "req_data", "type": "object", "required": true,  "desc": "业务参数对象 — 整体会被 SM4 加密成 Base64 字符串后再发送" },
+      { "path": "req_data.member_id",     "type": "string", "required": true,  "desc": "会员 ID" },
+      { "path": "req_data.activity_id",   "type": "string", "required": true,  "desc": "活动 ID" },
+      { "path": "req_data.owner_id",      "type": "string", "required": false, "desc": "归属方 ID" },
+      { "path": "req_data.promotion_id",  "type": "string", "required": false, "desc": "营销活动 ID" },
+      { "path": "req_data.channel_mchid", "type": "string", "required": false, "desc": "渠道商户号" },
+      { "path": "req_data.channel_appid", "type": "string", "required": false, "desc": "渠道 AppID" },
+      { "path": "req_data.channel_openid","type": "string", "required": false, "desc": "渠道用户 OpenID" },
+      { "path": "req_data.mer_order_id",  "type": "string", "required": false, "desc": "商户订单号" }
+    ],
+    "example": {
+      "req_time": "{{req_time}}", "version": "3.0", "req_id": "{{out_trade_no}}",
+      "req_data": {
+        "member_id": "AAA200154561278", "activity_id": "1100000086",
+        "owner_id": "80000007", "promotion_id": "FE8D9673C7AD41CBAD2F79DE219F80E0",
+        "channel_mchid": "1610278380", "channel_appid": "wx4654656c083983e6",
+        "channel_openid": "oKL-mwRzR-SBfI4QDAI1QXOpkyc8", "mer_order_id": "{{out_trade_no}}"
+      }
+    }
+  },
+  "merchant_register": {
+    "id": "merchant_register", "category": "开户进件类接口", "name": "新增进件",
+    "description": "拓客 SAAS 新增进件接口。整体报文 SM4 加密：HTTP 请求 body 是一段 base64 密文（不是 JSON），响应 body 也是 base64 密文；签名对密文做。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/merchant_encry",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/merchant_encry",
+    "encrypt": { "request": { "mode": "whole" }, "response": { "mode": "whole" } },
+    "fields": [
+      { "path": "ver", "required": true, "desc": "接口版本号，1.0" },
+      { "path": "timestamp", "required": true, "desc": "毫秒级时间戳字符串" },
+      { "path": "req_id", "required": true, "desc": "请求流水号" },
+      { "path": "req_data", "required": true, "desc": "进件业务数据 — 整个 body 一起加密" },
+      { "path": "req_data.org_code", "required": true, "desc": "组织代码" },
+      { "path": "req_data.user_no", "required": true, "desc": "代理商业务员编号" },
+      { "path": "req_data.source", "required": true, "desc": "进件来源" },
+      { "path": "req_data.mer_type", "required": true, "desc": "商户类型 TP_PERSONAL/TP_ENTERPRISE" },
+      { "path": "req_data.mer_name", "required": true, "desc": "商户名称" },
+      { "path": "req_data.busi_code", "required": true, "desc": "业务类型 WECHAT_PAY 等" },
+      { "path": "req_data.contact_mobile", "required": true, "desc": "联系手机号" },
+      { "path": "req_data.lar_id_card", "required": true, "desc": "法人证件号" },
+      { "path": "req_data.account_no", "required": true, "desc": "结算账号" },
+      { "path": "req_data.openning_bank_code", "required": true, "desc": "开户行联行号" },
+      { "path": "req_data.attchments", "required": true, "desc": "附件清单 [{id, type}], 通过文件上传接口取得" },
+      { "path": "req_data.biz_content.fees", "required": true, "desc": "费率清单" },
+      { "path": "req_data.biz_content.mcc", "required": true, "desc": "MCC 行业码" }
+    ],
+    "example": {
+      "ver": "1.0", "timestamp": "{{timestamp_ms}}", "req_id": "{{req_id}}",
+      "req_data": {
+        "org_code": "200028", "lar_id_type": "01",
+        "attchments": [
+          {"id":"merchant/null/20231227172245221010CHECKSTAND_IMG.png","type":"CHECKSTAND_IMG"},
+          {"id":"merchant/null/20231227172251776083SHOP_OUTSIDE_IMG.png","type":"SHOP_OUTSIDE_IMG"}
+        ],
+        "license_no": "92450202MA5MWYQK23", "account_name": "徐丽", "city_code": "6140",
+        "user_no": "20000101", "latitude": "114.034257",
+        "biz_content": {
+          "activity_id": "37",
+          "fees": [
+            {"fee_code":"WECHAT","fee_value":"0.60"},
+            {"fee_code":"ALIPAY","fee_value":"0.60"},
+            {"fee_code":"SCAN_PAY","fee_value":"0.60"},
+            {"top_fee":"20","fee_code":"DEBIT_CARD","fee_value":"0.38"},
+            {"fee_code":"CREDIT_CARD","fee_value":"0.6"},
+            {"top_fee":"20","fee_code":"UNIONPAY_WALLET_DEBIT_FEE","fee_value":"0.38"},
+            {"fee_code":"UNIONPAY_WALLET_CREDIT_FEE","fee_value":"0.6"}
+          ],
+          "mcc": "11002", "term_num": "1"
+        },
+        "mer_name": "转发进件测试",
+        "openning_bank_name": "中国农业银行广西柳州市柳南支行营业室",
+        "settle_city_name": "柳州市", "source": "H5", "license_dt_end": "9999-12-31",
+        "settle_province_code": "45", "longtude": "22.663572",
+        "account_no": "6228480850854176714", "lar_name": "徐哈哈",
+        "lar_id_card_start": "2015-01-16", "email": "2804711849@qq.com",
+        "openning_bank_code": "103614010818", "contact_mobile": "18276770550",
+        "account_id_dt_start": "2015-01-16", "lar_id_card": "460027200111297612",
+        "settle_city_code": "6140", "province_code": "6100", "contact_name": "徐哈哈",
+        "busi_code": "WECHAT_PAY", "account_type": "58", "license_name": "烟酒行批发24小时",
+        "mer_addr": "柳州市解放南路金鱼巷1号花旗壹号楼15-10",
+        "license_dt_start": "2017-11-21", "lar_id_card_end": "2035-01-16",
+        "county_code": "986140", "account_id_dt_end": "2035-01-16",
+        "mer_reg_name": "转发进件测试", "account_id_card": "460027200111297612",
+        "settle_province_name": "广西", "mer_type": "TP_PERSONAL",
+        "clearing_bank_code": "103100000026",
+        "business_content": "烟酒行批发24小时", "settle_type": "D1"
+      }
+    }
+  },
+  "file_upload": {
+    "id": "file_upload", "category": "开户进件类接口", "name": "文件上传",
+    "description": "进件附件上传接口。请求/响应明文 JSON, 不加密。file_base64 用 data URL 格式。返回的 url 用作进件 attchments[].id。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/customer/file/upload",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/customer/file/upload",
+    "fields": [
+      { "path": "ver", "required": true, "desc": "版本号 1.0.0" },
+      { "path": "timestamp", "required": true, "desc": "秒级时间戳" },
+      { "path": "req_data.file_base64", "required": true, "desc": "图片 Data URL: data:image/png;base64,xxx" },
+      { "path": "req_data.img_type", "required": true, "desc": "图片类型 SHOP_INSIDE_IMG/SHOP_OUTSIDE_IMG/CHECKSTAND_IMG/LICENSE_IMG/ID_CARD_FRONT 等" },
+      { "path": "req_data.sourcechnl", "required": false, "desc": "来源渠道, 默认 0" },
+      { "path": "req_data.is_ocr", "required": false, "desc": "是否 OCR true/false" }
+    ],
+    "example": {
+      "ver": "1.0.0", "timestamp": "{{timestamp}}",
+      "req_data": {
+        "file_base64": "data:image/png;base64,REPLACE_WITH_BASE64_DATA_URL",
+        "img_type": "SHOP_INSIDE_IMG", "sourcechnl": "0", "is_ocr": "false"
+      }
+    }
+  },
+  "open_merchant_info": {
+    "id": "open_merchant_info", "category": "开户进件类接口", "name": "商户信息查询",
+    "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/open_merchant_info",
+    "fields": [
+      { "path": "ver", "required": true, "desc": "版本号 1.0" },
+      { "path": "timestamp", "required": true, "desc": "毫秒级时间戳字符串" },
+      { "path": "req_id", "required": true, "desc": "请求流水号" },
+      { "path": "req_data.merchant_no", "required": false, "desc": "商户号 (与 customer_no 二选一)" },
+      { "path": "req_data.customer_no", "required": false, "desc": "客户号 (与 merchant_no 二选一)" },
+      { "path": "req_data.org_code", "required": true, "desc": "组织代码" }
+    ],
+    "example": {
+      "ver": "1.0", "timestamp": "{{timestamp_ms}}", "req_id": "{{req_id}}",
+      "req_data": { "merchant_no": "", "customer_no": "100138867", "org_code": "200028" }
+    }
+  }
+};
+
+// ==================== 状态 ====================
+let SCHEMAS = {};      // id -> schema
+let CURRENT_SCHEMA = null;
+let ENV = 'test';      // 'test' | 'prod'
+const FILE_MODE = location.protocol === 'file:';
+
+// ==================== 工具 ====================
+const $ = id => document.getElementById(id);
+const pad = n => n.toString().padStart(2,'0');
+const nowReqTime = () => { const d=new Date(); return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`; };
+const nowTs = () => Math.floor(Date.now()/1000).toString();
+const genNonce = (len=12) => { const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let s=''; for(let i=0;i<len;i++)s+=c[Math.floor(Math.random()*c.length)]; return s; };
+const genOrderNo = () => 'TEST'+Date.now()+Math.floor(Math.random()*10000).toString().padStart(4,'0');
+const escapeHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function hex2b64(hex) { const b=new Uint8Array(hex.length/2); for(let i=0;i<hex.length;i+=2)b[i/2]=parseInt(hex.substr(i,2),16); let s=''; for(const x of b)s+=String.fromCharCode(x); return btoa(s); }
+function b642hex(b64) { const bin=atob(b64); let h=''; for(let i=0;i<bin.length;i++)h+=bin.charCodeAt(i).toString(16).padStart(2,'0'); return h; }
+
+function signRSA(privPem, payload) {
+  const k = KEYUTIL.getKey(privPem);
+  const s = new KJUR.crypto.Signature({alg:'SHA256withRSA'});
+  s.init(k); s.updateString(payload);
+  return hex2b64(s.sign());
+}
+function verifyRSA(certPem, payload, sigB64) {
+  const k = KEYUTIL.getKey(certPem);
+  const s = new KJUR.crypto.Signature({alg:'SHA256withRSA'});
+  s.init(k); s.updateString(payload);
+  return s.verify(b642hex(sigB64));
+}
+
+function copyText(el, raw) {
+  const txt = raw || el.dataset.raw || el.innerText.replace('复制','').trim();
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn = el.querySelector('.copy-btn') || el;
+    if (btn.tagName==='BUTTON') { const o=btn.innerText; btn.innerText='✓ 已复制'; setTimeout(()=>btn.innerText=o,1500); }
+  });
+}
+
+// ==================== Schema 加载 ====================
+async function loadSchemas() {
+  // file:// 模式或无服务时直接走内嵌, 不尝试 fetch
+  let idx, useInline = FILE_MODE;
+  if (!useInline) {
+    try {
+      idx = await fetch('schemas/index.json').then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    } catch (e) {
+      console.warn('[schemas] fetch failed, using inline:', e.message);
+      useInline = true;
+    }
+  }
+  if (useInline) idx = INLINE_SCHEMAS_INDEX;
+
+  // 收集所有接口 id (扁平 + 嵌套 groups)
+  const allIds = [];
+  for (const cat of idx.categories) {
+    if (cat.groups && cat.groups.length) {
+      for (const g of cat.groups) for (const id of (g.interfaces || [])) allIds.push(id);
+    } else {
+      for (const id of (cat.interfaces || [])) allIds.push(id);
+    }
+  }
+
+  // 加载每个接口的 schema
+  for (const id of allIds) {
+    let sch = INLINE_SCHEMAS[id] || null;
+    if (!useInline) {
+      try {
+        sch = await fetch('schemas/' + id + '.json').then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        });
+      } catch (e) {
+        console.warn('[schemas] fetch ' + id + ' failed, falling back to inline:', e.message);
+        if (!sch) continue;
+      }
+    }
+    if (!sch) { console.warn('[schemas] missing inline schema for', id); continue; }
+    SCHEMAS[id] = sch;
+  }
+
+  renderTree(idx);
+
+  // 默认选中第一个接口
+  const firstId = Object.keys(SCHEMAS)[0];
+  if (firstId) selectInterface(firstId);
+
+  // file:// 模式给个提示
+  if (FILE_MODE) {
+    const banner = document.createElement('div');
+    banner.className = 'alert alert-warn';
+    banner.style.marginBottom = '16px';
+    banner.innerHTML = '<strong>当前为离线打开 (file://) 模式：</strong>'
+      + '签名 / 验签 / SM4 加解密 / 诊断都正常工作。'
+      + '"发送请求"功能需要后端代理转发, 请运行 <code>node server.js</code> 然后访问 '
+      + '<a href="http://localhost:3000" target="_blank">http://localhost:3000</a>。';
+    const wrap = document.querySelector('.wrap');
+    const modeBar = document.querySelector('.mode-bar');
+    if (wrap && modeBar) wrap.insertBefore(banner, modeBar);
+  }
+}
+
+// 渲染左侧目录树 — 支持 cat.groups[].interfaces[] (嵌套) 或 cat.interfaces[] (扁平)
+function renderTree(idx) {
+  const tree = $('ifaceTree');
+  tree.innerHTML = '';
+  for (const cat of idx.categories) {
+    const useGroups = cat.groups && cat.groups.length > 0;
+    const flatIds = useGroups ? null : (cat.interfaces || []);
+    const totalCount = useGroups
+      ? cat.groups.reduce((s, g) => s + (g.interfaces || []).filter(id => SCHEMAS[id]).length, 0)
+      : flatIds.filter(id => SCHEMAS[id]).length;
+    const isEmpty = totalCount === 0;
+
+    // 分类标题
+    const catDiv = document.createElement('div');
+    catDiv.className = 'tree-cat' + (isEmpty ? ' empty' : '');
+    catDiv.innerHTML = `<span class="caret">▼</span><span>${escapeHtml(cat.name)}</span><span class="tree-cat-count">${totalCount || (isEmpty ? '0' : '')}</span>`;
+
+    // 子节点容器
+    const children = document.createElement('div');
+    children.className = 'tree-children';
+
+    if (isEmpty) {
+      children.innerHTML = '<div class="tree-empty-note">(暂无接口, 后续添加)</div>';
+    } else if (useGroups) {
+      for (const grp of cat.groups) {
+        const validIds = (grp.interfaces || []).filter(id => SCHEMAS[id]);
+        if (!validIds.length) continue;
+        const grpDiv = document.createElement('div');
+        grpDiv.className = 'tree-group';
+        grpDiv.innerHTML = `<span class="caret">▼</span><span>${escapeHtml(grp.name)}</span>`;
+        const grpChildren = document.createElement('div');
+        grpChildren.className = 'tree-children';
+        for (const id of validIds) {
+          grpChildren.appendChild(makeTreeItem(id, true));
+        }
+        grpDiv.addEventListener('click', () => {
+          grpDiv.classList.toggle('collapsed');
+          grpChildren.classList.toggle('collapsed');
+        });
+        children.appendChild(grpDiv);
+        children.appendChild(grpChildren);
+      }
+    } else {
+      for (const id of flatIds) {
+        if (SCHEMAS[id]) children.appendChild(makeTreeItem(id, false));
+      }
+    }
+
+    if (!isEmpty) {
+      catDiv.addEventListener('click', () => {
+        catDiv.classList.toggle('collapsed');
+        children.classList.toggle('collapsed');
+      });
+    }
+    tree.appendChild(catDiv);
+    tree.appendChild(children);
+  }
+}
+
+function makeTreeItem(id, inGroup) {
+  const sch = SCHEMAS[id];
+  const item = document.createElement('div');
+  item.className = 'tree-item' + (inGroup ? ' in-group' : '');
+  item.dataset.id = id;
+  item.dataset.searchText = ((sch.name || '') + ' ' + id).toLowerCase();
+  item.innerHTML = `<span>${escapeHtml(sch.name || id)}</span><span class="item-id">${escapeHtml(id)}</span>`;
+  item.addEventListener('click', e => { e.stopPropagation(); selectInterface(id); });
+  return item;
+}
+
+// 选中一个接口
+function selectInterface(id) {
+  if (!SCHEMAS[id]) return;
+  CURRENT_SCHEMA = SCHEMAS[id];
+
+  // 高亮树
+  document.querySelectorAll('.tree-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === id)
+  );
+  // 展开包含该项的所有祖先 (tree-children 和它前一个兄弟 tree-cat/tree-group 都要展开)
+  let el = document.querySelector('.tree-item.active');
+  while (el && el !== document.body) {
+    if (el.classList && el.classList.contains('tree-children')) {
+      el.classList.remove('collapsed');
+      const header = el.previousElementSibling;
+      if (header && header.classList) header.classList.remove('collapsed');
+    }
+    el = el.parentElement;
+  }
+
+  // 渲染信息条
+  $('noIfaceHint').style.display = 'none';
+  $('ifaceInfo').style.display = '';
+  $('ifaceName').textContent = CURRENT_SCHEMA.name;
+  $('ifaceCategory').textContent = CURRENT_SCHEMA.category || '';
+  $('ifaceDesc').textContent = CURRENT_SCHEMA.description || '';
+  $('ifaceUrl').textContent = currentUrl();
+
+  // 渲染字段说明
+  const enc = CURRENT_SCHEMA.encrypt || {};
+  const reqEncFields = (enc.request && enc.request.mode === 'fields') ? new Set(enc.request.fields || []) : new Set();
+  const reqEncAllPath = (enc.request && enc.request.mode === 'all') ? (enc.request.path || 'req_data') : null;
+  const fdb = $('fieldDocBody');
+  fdb.innerHTML = (CURRENT_SCHEMA.fields || []).map(f => {
+    const isEncField = reqEncFields.has(f.path);
+    const isEncWhole = reqEncAllPath && (f.path === reqEncAllPath || f.path.startsWith(reqEncAllPath + '.'));
+    const encBadge = (isEncField || isEncWhole)
+      ? '<span class="field-req" style="background:#0d4f5c; color:white;">SM4</span>'
+      : '';
+    return `
+    <div class="field-item">
+      <span class="field-path">${escapeHtml(f.path)}</span>
+      <span class="field-req ${f.required?'yes':'no'}">${f.required?'必传':'选填'}</span>
+      ${encBadge}
+      <div class="field-desc">${escapeHtml(f.desc || '')}</div>
+    </div>`;
+  }).join('') || '该接口暂无字段说明';
+
+  loadExampleBody();
+  renderSm4Hint();
+  updateNewOrderBtnLabel();
+}
+
+// 搜索过滤
+function filterTree() {
+  const q = ($('ifaceSearch').value || '').trim().toLowerCase();
+  const items = document.querySelectorAll('.tree-item');
+  let visibleCount = 0;
+  items.forEach(el => {
+    const match = !q || (el.dataset.searchText || '').includes(q);
+    el.style.display = match ? '' : 'none';
+    if (match) visibleCount++;
+  });
+  // 搜索时把所有分类/分组展开，方便看到结果
+  if (q) {
+    document.querySelectorAll('.tree-cat, .tree-group, .tree-children').forEach(c =>
+      c.classList.remove('collapsed')
+    );
+  }
+  // 没有匹配时, 在树底加一行提示 (避免重复)
+  let nomatch = $('treeNoMatch');
+  if (q && visibleCount === 0) {
+    if (!nomatch) {
+      nomatch = document.createElement('div');
+      nomatch.id = 'treeNoMatch';
+      nomatch.className = 'tree-no-match';
+      nomatch.textContent = '没有匹配的接口';
+      $('ifaceTree').appendChild(nomatch);
+    }
+  } else if (nomatch) {
+    nomatch.remove();
+  }
+}
+
+function currentUrl() {
+  if (!CURRENT_SCHEMA) return '';
+  return ENV === 'prod' ? (CURRENT_SCHEMA.url_prod || CURRENT_SCHEMA.url_test) : CURRENT_SCHEMA.url_test;
+}
+
+function onEnvChange() {
+  ENV = $('envSelect').value;
+  if (CURRENT_SCHEMA) $('ifaceUrl').textContent = currentUrl();
+}
+
+function loadExampleBody() {
+  if (!CURRENT_SCHEMA) return;
+  const ex = JSON.parse(JSON.stringify(CURRENT_SCHEMA.example));
+  const orderNo = genOrderNo();
+  // 占位符替换
+  const filled = JSON.stringify(ex)
+    .replace(/\{\{req_time\}\}/g, nowReqTime())                  // yyyyMMddHHmmss
+    .replace(/\{\{out_trade_no\}\}/g, orderNo)                   // 商户订单号
+    .replace(/\{\{req_id\}\}/g, orderNo)                         // 请求流水号 (复用)
+    .replace(/\{\{timestamp_ms\}\}/g, Date.now().toString())     // 13 位毫秒
+    .replace(/\{\{timestamp\}\}/g, nowTs());                     // 10 位秒
+  $('reqBody').value = JSON.stringify(JSON.parse(filled), null, 2);
+}
+
+function newOrderNo() {
+  try {
+    const o = JSON.parse($('reqBody').value);
+    const newId = genOrderNo();
+    // 只更新已存在的相关字段, 不无脑添加
+    if (o.req_data && 'out_trade_no' in o.req_data) o.req_data.out_trade_no = newId;
+    if (o.req_data && 'mer_order_id' in o.req_data) o.req_data.mer_order_id = newId;
+    if ('req_id' in o) o.req_id = newId;
+    if ('req_time' in o) o.req_time = nowReqTime();
+    if ('timestamp' in o) {
+      // 根据原值长度判断秒/毫秒
+      const cur = String(o.timestamp);
+      o.timestamp = (cur.length >= 13) ? Date.now().toString() : Math.floor(Date.now()/1000).toString();
+    }
+    $('reqBody').value = JSON.stringify(o, null, 2);
+    updateNewOrderBtnLabel();   // 刷新完后顺便更新按钮文本
+  } catch (e) { alert('当前 body 不是合法 JSON'); }
+}
+
+// 根据当前 body 实际有的字段, 动态改"刷新动态字段"按钮的文本; 啥都没有就隐藏按钮
+function updateNewOrderBtnLabel() {
+  const btn = $('newOrderBtn');
+  if (!btn) return;
+  let body;
+  try { body = JSON.parse($('reqBody').value); }
+  catch (e) { btn.textContent = '刷新动态字段'; btn.style.display = ''; return; }
+
+  const parts = [];
+  const hasOrder = body.req_data && ('out_trade_no' in body.req_data || 'mer_order_id' in body.req_data);
+  const hasReqId = 'req_id' in body;
+  const hasReqTime = 'req_time' in body;
+  const hasTs = 'timestamp' in body;
+  if (hasOrder) parts.push('订单号');
+  if (hasReqId) parts.push('流水号');
+  if (hasReqTime || hasTs) parts.push('时间戳');
+
+  if (parts.length === 0) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = '';
+    btn.textContent = '刷新 ' + parts.join(' / ');
+    btn.title = '将刷新 body 里已存在的: ' + parts.join('、');
+  }
+}
+
+function formatJson(id) {
+  try { $(id).value = JSON.stringify(JSON.parse($(id).value), null, 2); }
+  catch (e) { alert('JSON 错误: ' + e.message); }
+}
+
+function fillDemoKey(id) { $(id).value = DEMO_PRIV_KEY; }
+
+// ==================== Schema 加密辅助 ====================
+// 按 a.b.c 路径取嵌套属性
+function getByPath(obj, path) {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+function setByPath(obj, path, value) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (cur[parts[i]] == null || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+// 按 schema.encrypt.request 加密 body 对象（原地修改）, 返回受影响字段列表
+function applyRequestEncrypt(bodyObj, encSpec, sm4Key) {
+  if (!encSpec) return [];
+  const touched = [];
+  if (encSpec.mode === 'all') {
+    const path = encSpec.path || 'req_data';
+    const target = getByPath(bodyObj, path);
+    if (target == null) return [];
+    const plain = typeof target === 'string' ? target : JSON.stringify(target);
+    setByPath(bodyObj, path, SM4.encrypt(sm4Key, plain));
+    touched.push(path);
+  } else if (encSpec.mode === 'fields') {
+    for (const fp of (encSpec.fields || [])) {
+      const v = getByPath(bodyObj, fp);
+      if (v == null || v === '') continue;
+      setByPath(bodyObj, fp, SM4.encrypt(sm4Key, String(v)));
+      touched.push(fp);
+    }
+  }
+  return touched;
+}
+
+// 按 schema.encrypt.response 解密响应对象, 返回受影响字段列表（失败的字段也会列出，状态在 UI 里展示）
+function applyResponseDecrypt(respObj, encSpec, sm4Key) {
+  if (!encSpec) return { ok: [], fail: [] };
+  const ok = [], fail = [];
+  if (encSpec.mode === 'all') {
+    const path = encSpec.path || 'resp_data';
+    const cipher = getByPath(respObj, path);
+    if (typeof cipher === 'string' && cipher) {
+      try {
+        const plain = SM4.decrypt(sm4Key, cipher);
+        let parsed = plain;
+        try { parsed = JSON.parse(plain); } catch (e) { /* 不是 JSON 就保留字符串 */ }
+        setByPath(respObj, path, parsed);
+        ok.push(path);
+      } catch (e) {
+        fail.push({ path, error: e.message });
+      }
+    }
+  } else if (encSpec.mode === 'fields') {
+    for (const fp of (encSpec.fields || [])) {
+      const v = getByPath(respObj, fp);
+      if (typeof v !== 'string' || !v) continue;
+      try {
+        setByPath(respObj, fp, SM4.decrypt(sm4Key, v));
+        ok.push(fp);
+      } catch (e) {
+        fail.push({ path: fp, error: e.message });
+      }
+    }
+  }
+  return { ok, fail };
+}
+
+// 根据 schema 渲染 SM4 提示横幅
+function renderSm4Hint() {
+  const hint = $('sm4Hint');
+  const detail = $('sm4HintDetail');
+  if (!CURRENT_SCHEMA || !CURRENT_SCHEMA.encrypt) {
+    hint.style.display = 'none';
+    return;
+  }
+  const e = CURRENT_SCHEMA.encrypt;
+  const parts = [];
+  if (e.request) {
+    if (e.request.mode === 'whole') parts.push('请求整体报文加密 (HTTP body 是密文 base64, 签名也基于密文)');
+    else if (e.request.mode === 'all') parts.push(`请求 ${e.request.path || 'req_data'} 整体加密`);
+    else if (e.request.mode === 'fields') parts.push('请求字段加密：' + (e.request.fields || []).join(', '));
+  }
+  if (e.response) {
+    if (e.response.mode === 'whole') parts.push('响应整体报文解密 (整个响应 body 是密文)');
+    else if (e.response.mode === 'all') parts.push(`响应 ${e.response.path || 'resp_data'} 整体解密`);
+    else if (e.response.mode === 'fields') parts.push('响应字段解密：' + (e.response.fields || []).join(', '));
+  }
+  if (parts.length) {
+    detail.textContent = parts.join('；') + '。发送时工具会自动用上方 SM4 密钥处理。';
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+function loadKeyFile(e, id) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => $(id).value = r.result.trim();
+  r.readAsText(f);
+}
+
+function switchMode(e, id) {
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  $(id).classList.add('active');
+}
+function switchTab(e, id) {
+  e.currentTarget.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.currentTarget.parentElement.parentElement.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  $(id).classList.add('active');
+}
+
+// ==================== 模式 1: 发送 ====================
+async function sendRequest() {
+  const btn = $('sendBtn');
+  btn.disabled = true; btn.innerText = '处理中...';
+  $('respBox').innerHTML = ''; $('signBox').innerHTML = '';
+  $('resultCard').classList.add('show');
+
+  try {
+    // 默认在每次发送前自动刷新 req_id / out_trade_no / mer_order_id / req_time / timestamp
+    // (拉卡拉大多接口要求这些字段全局唯一; 想原样重发勾上"原样发送")
+    const rawSend = $('rawSendChk') && $('rawSendChk').checked;
+    if (!rawSend) {
+      try {
+        const o = JSON.parse($('reqBody').value);
+        const newId = genOrderNo();
+        if (o.req_data && 'out_trade_no' in o.req_data) o.req_data.out_trade_no = newId;
+        if (o.req_data && 'mer_order_id' in o.req_data) o.req_data.mer_order_id = newId;
+        if ('req_id' in o) o.req_id = newId;
+        if ('req_time' in o) o.req_time = nowReqTime();
+        if ('timestamp' in o) {
+          const cur = String(o.timestamp);
+          o.timestamp = (cur.length >= 13) ? Date.now().toString() : Math.floor(Date.now()/1000).toString();
+        }
+        $('reqBody').value = JSON.stringify(o, null, 2);
+      } catch (e) { /* 下面 JSON.parse 会再报错, 这里静默 */ }
+    }
+
+    const appId = $('appId').value.trim();
+    const serialNo = $('serialNo').value.trim();
+    const url = currentUrl();
+    const privPem = $('privateKey').value.trim();
+    const bodyText = $('reqBody').value.trim();
+
+    if (!url) throw new Error('未选择接口');
+    if (!appId || !serialNo) throw new Error('App ID / 证书序列号不能为空');
+    if (!privPem) throw new Error('请粘贴私钥, 或点击"填入测试私钥"');
+    let bodyObj;
+    try { bodyObj = JSON.parse(bodyText); } catch (e) { throw new Error('Body 不是合法 JSON: ' + e.message); }
+
+    // SM4 加密 (先加密, 后签名 — 签的是加密后的字节)
+    let encryptInfo = { touched: [], plainBody: null, wholeBody: false };
+    const encSpec = CURRENT_SCHEMA && CURRENT_SCHEMA.encrypt;
+    let httpBody;       // 实际通过网络发送的 HTTP body
+    let contentType = 'application/json';
+
+    if (encSpec && encSpec.request && encSpec.request.mode === 'whole') {
+      // 整体报文加密: 整个 HTTP body 就是密文 base64 字符串, 不是 JSON
+      const sm4Key = $('sm4Key').value.trim();
+      if (!sm4Key) throw new Error('该接口要求 SM4 整体报文加密, 请先填 SM4 密钥');
+      const plainCompact = JSON.stringify(bodyObj);
+      encryptInfo.plainBody = JSON.stringify(bodyObj, null, 2);
+      encryptInfo.wholeBody = true;
+      httpBody = SM4.encrypt(sm4Key, plainCompact);
+      encryptInfo.touched = ['<整个报文>'];
+      // 默认 application/json (网关通常按这个判断协议); 个别接口要 text/plain 可在 schema.encrypt.request.content_type 覆盖
+      contentType = (encSpec.request.content_type) || 'application/json';
+    } else if (encSpec && encSpec.request) {
+      // 字段/路径加密: 还是 JSON, 加密替换部分字段
+      const sm4Key = $('sm4Key').value.trim();
+      if (!sm4Key) throw new Error('该接口要求 SM4 加密, 请先填 SM4 密钥');
+      encryptInfo.plainBody = JSON.stringify(bodyObj, null, 2);
+      encryptInfo.touched = applyRequestEncrypt(bodyObj, encSpec.request, sm4Key);
+      httpBody = JSON.stringify(bodyObj);
+    } else {
+      httpBody = JSON.stringify(bodyObj);
+    }
+
+    const ts = nowTs();
+    const nonce = genNonce(12);
+    const signPayload = `${appId}\n${serialNo}\n${ts}\n${nonce}\n${httpBody}\n`;
+    const signature = signRSA(privPem, signPayload);
+    const auth = `LKLAPI-SHA256withRSA appid="${appId}",serial_no="${serialNo}",timestamp="${ts}",nonce_str="${nonce}",signature="${signature}"`;
+
+    renderSignDetails({appId, serialNo, ts, nonce, signPayload, signature, auth, encryptInfo, httpBody, contentType});
+    renderCurl(url, auth, httpBody, contentType);
+
+    // 通过代理发送
+    let respStatus=0, respText='', respHeaders={}, fetchErr=null;
+    try {
+      const resp = await fetch(PROXY_PATH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': contentType,
+          'Authorization': auth,
+          'X-Target-Url': url
+        },
+        body: httpBody
+      });
+      respStatus = resp.status;
+      resp.headers.forEach((v,k)=>respHeaders[k.toLowerCase()]=v);
+      respText = await resp.text();
+    } catch (e) { fetchErr = e; }
+
+    renderResponse({respStatus, respText, respHeaders, fetchErr});
+  } catch (err) {
+    $('respBox').innerHTML = `<div class="alert alert-err"><strong>错误:</strong> ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.innerText = '发 送 请 求';
+  }
+}
+
+function renderSignDetails(d) {
+  const visiblePayload = d.signPayload.replace(/\n/g,'<span class="lf-marker">↵\n</span>');
+  let encryptHtml = '';
+  if (d.encryptInfo && d.encryptInfo.touched && d.encryptInfo.touched.length) {
+    const headline = d.encryptInfo.wholeBody
+      ? '<strong>整体报文已 SM4 加密：</strong>HTTP 请求 body 不再是 JSON, 而是一段 base64 密文字符串。签名待签名报文的第 5 行就是这段密文。'
+      : ('<strong>已对以下字段做 SM4 加密:</strong> ' + d.encryptInfo.touched.map(p => `<code>${escapeHtml(p)}</code>`).join(', ') + '<br>加密发生在签名之前，因此签名值是基于加密后的报文。');
+    encryptHtml = `
+      <div class="alert alert-info" style="margin-bottom:12px;">${headline}</div>
+      <div class="kv"><div class="kv-label">① 加密前的明文 Body</div><div class="kv-value mono-block">${escapeHtml(d.encryptInfo.plainBody || '')}</div></div>
+      <div class="kv"><div class="kv-label">② 加密后的实际 HTTP body (Content-Type: ${escapeHtml(d.contentType || 'application/json')}, ${(d.httpBody||'').length} 字符)</div><div class="kv-value mono-block">${escapeHtml(d.httpBody || '')}</div></div>
+    `;
+  } else {
+    encryptHtml = `<div class="kv"><div class="kv-label">实际 HTTP body (Content-Type: ${escapeHtml(d.contentType || 'application/json')})</div><div class="kv-value mono-block">${escapeHtml(d.httpBody || '')}</div></div>`;
+  }
+  $('signBox').innerHTML = `
+    ${encryptHtml}
+    <div class="kv"><div class="kv-label">App ID</div><div class="kv-value">${escapeHtml(d.appId)}</div></div>
+    <div class="kv"><div class="kv-label">Serial No</div><div class="kv-value">${escapeHtml(d.serialNo)}</div></div>
+    <div class="kv"><div class="kv-label">Timestamp</div><div class="kv-value">${escapeHtml(d.ts)}</div></div>
+    <div class="kv"><div class="kv-label">Nonce Str</div><div class="kv-value">${escapeHtml(d.nonce)}</div></div>
+    <div class="kv"><div class="kv-label">③ 待签名报文 (5 行, ↵ 标记换行) — 第 5 行就是上面的 HTTP body</div><div class="kv-value mono-block">${visiblePayload}</div></div>
+    <div class="kv"><div class="kv-label">④ SHA256withRSA 签名 (用私钥对③做签)</div><div class="kv-value">${escapeHtml(d.signature)}</div></div>
+    <div class="kv"><div class="kv-label">⑤ Authorization 头</div><div class="kv-value mono-block">${escapeHtml(d.auth)}</div></div>
+  `;
+}
+
+function renderCurl(url, auth, body, contentType) {
+  const ct = contentType || 'application/json';
+  const bb = body.replace(/'/g,`'\\''`);
+  const aa = auth.replace(/'/g,`'\\''`);
+  const curl = `curl -X POST '${url}' \\
+  -H 'Content-Type: ${ct}' \\
+  -H 'Accept: application/json' \\
+  -H 'Authorization: ${aa}' \\
+  -d '${bb}'`;
+  const psBody = body.replace(/"/g,'\\"').replace(/\$/g,'`$');
+  const psAuth = auth.replace(/"/g,'\\"');
+  const ps = `$headers = @{
+  "Content-Type"  = "${ct}"
+  "Authorization" = "${psAuth}"
+}
+Invoke-RestMethod -Uri "${url}" -Method Post -Headers $headers -Body "${psBody}" -ContentType "${ct}"`;
+  const c=$('curlCmd'); c.dataset.raw=curl; c.innerHTML=`<button class="copy-btn" onclick="copyText(this.parentElement)">复制</button>${escapeHtml(curl)}`;
+  const p=$('psCmd'); p.dataset.raw=ps; p.innerHTML=`<button class="copy-btn" onclick="copyText(this.parentElement)">复制</button>${escapeHtml(ps)}`;
+}
+
+function renderResponse({respStatus, respText, respHeaders, fetchErr}) {
+  const box = $('respBox');
+  if (fetchErr) {
+    box.innerHTML = `<div class="alert alert-err"><strong>请求失败:</strong> ${escapeHtml(fetchErr.message)}<br>确认代理服务正在运行 (访问 /api/health 应返回 ok)。</div>`;
+    return;
+  }
+  // 代理本身的错误
+  if (respStatus === 502) {
+    let msg = respText;
+    try { const j = JSON.parse(respText); if (j.proxy_error) msg = `代理转发失败: ${j.message} (${j.code||''})`; } catch(e){}
+    box.innerHTML = `<div class="alert alert-err">${escapeHtml(msg)}</div>`;
+    return;
+  }
+
+  let bizBadge = '';
+  let prettyBody = respText;
+  let decryptHtml = '';
+  let displayText = respText;   // 解密后用于展示和解析的文本
+  let cipherText = null;        // 整体加密时的原始密文 (用于 sig 验证)
+
+  // SM4 整体报文响应解密 — 先做, 后续 JSON.parse 用解密结果
+  // 容错: 如果响应本身就是合法 JSON (典型是错误响应 / 网关错误), 跳过解密直接展示
+  const encResp = CURRENT_SCHEMA && CURRENT_SCHEMA.encrypt && CURRENT_SCHEMA.encrypt.response;
+  if (encResp && encResp.mode === 'whole') {
+    let respLooksLikePlainJson = false;
+    try { JSON.parse(respText); respLooksLikePlainJson = true; } catch (e) {}
+
+    if (respLooksLikePlainJson) {
+      decryptHtml = `<div class="kv"><div class="kv-label">SM4 整体响应解密</div><div class="kv-value"><span class="badge badge-warn">响应已经是明文 JSON, 跳过 SM4 解密 (通常是网关错误或预处理失败响应)</span></div></div>`;
+    } else {
+      const sm4Key = $('sm4Key').value.trim();
+      cipherText = respText.trim();
+      if (sm4Key && cipherText) {
+        try {
+          displayText = SM4.decrypt(sm4Key, cipherText);
+          decryptHtml = `<div class="kv"><div class="kv-label">SM4 整体响应解密</div><div class="kv-value"><span class="badge badge-ok">✓ 整个响应 body 已 SM4 解密</span></div></div>`;
+        } catch (e) {
+          decryptHtml = `<div class="kv"><div class="kv-label">SM4 整体响应解密</div><div class="kv-value"><span class="badge badge-err">解密失败: ${escapeHtml(e.message)}</span></div></div>`;
+        }
+      } else if (!sm4Key) {
+        decryptHtml = `<div class="kv"><div class="kv-label">SM4 整体响应解密</div><div class="kv-value"><span class="badge badge-warn">该接口响应整体加密，但未填 SM4 密钥</span></div></div>`;
+      }
+    }
+  }
+
+  try {
+    const j = JSON.parse(displayText);
+    if (j.code) {
+      const ok = j.code === 'BBS00000' || j.code === '000000';
+      bizBadge = `<div class="kv"><div class="kv-label">业务结果</div><div class="kv-value">${ok?`<span class="badge badge-ok">${escapeHtml(j.code)}</span>`:`<span class="badge badge-err">${escapeHtml(j.code)}</span>`} ${escapeHtml(j.msg||'')}</div></div>`;
+    }
+    // 字段/路径模式响应解密 (whole 模式不走这里)
+    if (encResp && encResp.mode !== 'whole') {
+      const sm4Key = $('sm4Key').value.trim();
+      if (sm4Key) {
+        const result = applyResponseDecrypt(j, encResp, sm4Key);
+        if (result.ok.length || result.fail.length) {
+          const okPart = result.ok.length ? `<span class="badge badge-ok">已解密: ${result.ok.map(escapeHtml).join(', ')}</span>` : '';
+          const failPart = result.fail.length ? `<span class="badge badge-err">解密失败: ${result.fail.map(f => escapeHtml(f.path) + '(' + escapeHtml(f.error) + ')').join(', ')}</span>` : '';
+          decryptHtml = `<div class="kv"><div class="kv-label">SM4 响应解密</div><div class="kv-value">${okPart} ${failPart}</div></div>`;
+        }
+      } else {
+        decryptHtml = `<div class="kv"><div class="kv-label">SM4 响应解密</div><div class="kv-value"><span class="badge badge-warn">该接口响应需 SM4 解密，但未填密钥</span></div></div>`;
+      }
+    }
+    prettyBody = JSON.stringify(j, null, 2);
+  } catch (e) { prettyBody = displayText; }
+
+  // 验签
+  let verifyHtml = '';
+  const lklSign = (respHeaders['lklapi-signature']||'').replace(/^"|"$/g,'');
+  if (lklSign) {
+    const payload = `${respHeaders['lklapi-appid']||''}\n${respHeaders['lklapi-serial']||''}\n${respHeaders['lklapi-timestamp']||''}\n${respHeaders['lklapi-nonce']||''}\n${respText}\n`;
+    let ok=false, err='';
+    try { ok = verifyRSA(LKL_PUB_CERT_TEST, payload, lklSign); } catch(e){ err=e.message; }
+    verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value">${ok?'<span class="badge badge-ok">✓ 验签通过</span>':`<span class="badge badge-err">✗ 验签失败</span> ${escapeHtml(err)}`}</div></div>`;
+  } else {
+    verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value"><span class="badge badge-warn">无 Lklapi-Signature 响应头</span></div></div>`;
+  }
+
+  let statusBadge;
+  if (respStatus>=200 && respStatus<300) statusBadge = `<span class="badge badge-ok">${respStatus}</span>`;
+  else if (respStatus>=400) statusBadge = `<span class="badge badge-err">${respStatus}</span>`;
+  else statusBadge = `<span class="badge badge-warn">${respStatus}</span>`;
+
+  const headersStr = Object.entries(respHeaders).map(([k,v])=>`${k}: ${v}`).join('\n');
+  const bodyLabel = cipherText
+    ? '响应体 — SM4 解密后明文 (JSON)'
+    : (decryptHtml ? '响应体 (敏感字段已就地解密)' : '响应体');
+  // 密文原文: whole-mode 时显眼展示, 跟明文上下对照
+  const cipherBlock = cipherText
+    ? `<div class="kv"><div class="kv-label">响应体 — 原始密文 (HTTP body 实际收到的字节, ${cipherText.length} 字符 base64)</div><div class="kv-value mono-block">${escapeHtml(cipherText)}</div></div>`
+    : '';
+  box.innerHTML = `
+    <div class="kv"><div class="kv-label">HTTP 状态</div><div class="kv-value">${statusBadge}</div></div>
+    ${bizBadge}
+    ${verifyHtml}
+    ${decryptHtml}
+    ${cipherBlock}
+    <div class="kv"><div class="kv-label">${bodyLabel}</div><div class="kv-value mono-block">${escapeHtml(prettyBody)}</div></div>
+    <details><summary>查看响应头</summary><div class="kv-value mono-block">${escapeHtml(headersStr)}</div></details>
+  `;
+}
+
+// ==================== 模式 2: 诊断 ====================
+function runDiagnose() {
+  const out = $('diagResult');
+  out.innerHTML = '';
+  try {
+    const appId = $('diagAppId').value.trim();
+    const serial = $('diagSerialNo').value.trim();
+    const ts = $('diagTimestamp').value.trim();
+    const nonce = $('diagNonceStr').value.trim();
+    const body = $('diagBody').value;  // 不 trim, 保留空白
+    const priv = $('diagPriv').value.trim();
+    const yourSig = $('diagYourSig').value.trim();
+
+    if (!appId||!serial||!ts||!nonce||!body||!priv||!yourSig)
+      throw new Error('所有字段都要填');
+
+    const payload = `${appId}\n${serial}\n${ts}\n${nonce}\n${body}\n`;
+    const toolSig = signRSA(priv, payload);
+
+    const match = (toolSig === yourSig);
+    const visiblePayload = payload.replace(/\n/g,'<span class="lf-marker">↵\n</span>');
+
+    let html = `
+      <div class="diag-result ${match?'match':'mismatch'}">
+        <div style="font-size:18px; font-weight:600; margin-bottom:12px;">
+          ${match ? '✅ 签名一致 — 您的签名是对的' : '❌ 签名不一致 — 请看下方分析'}
+        </div>
+        <div class="kv"><div class="kv-label">您的签名</div><div class="kv-value">${escapeHtml(yourSig)}</div></div>
+        <div class="kv"><div class="kv-label">工具签名</div><div class="kv-value">${escapeHtml(toolSig)}</div></div>
+        <div class="kv"><div class="kv-label">实际被签的字节 (5 行, ↵ 标记换行)</div><div class="kv-value mono-block">${visiblePayload}</div></div>
+      </div>
+    `;
+
+    if (!match) {
+      const issues = [];
+      if (!body.trim().startsWith('{') && !body.trim().startsWith('[')) {
+        issues.push('Body 看起来不像 JSON, 检查是否包含了多余字符');
+      }
+      try {
+        const parsed = JSON.parse(body);
+        const recomposed = JSON.stringify(parsed);
+        if (recomposed !== body) {
+          issues.push(`<strong>Body 含有多余空白字符</strong> — 您签的是格式化过的 JSON (有空格/换行), 而拉卡拉建议签紧凑格式。<br>紧凑版本应该是:<br><code style="word-break:break-all; background:var(--code-bg); padding:2px 4px;">${escapeHtml(recomposed)}</code>`);
+        }
+      } catch (e) {
+        issues.push('Body 不是合法的 JSON, 检查是否漏了大括号或引号');
+      }
+      if (nonce.length !== 12) issues.push(`Nonce Str 长度是 ${nonce.length}, 文档要求 12 位`);
+      if (!/^\d+$/.test(ts)) issues.push('Timestamp 应该是纯数字 (秒级时间戳)');
+      else if (ts.length === 13) issues.push('Timestamp 是 13 位 — 您可能用了毫秒, 文档要求秒 (10 位)');
+
+      // 检查私钥格式
+      if (!priv.includes('BEGIN PRIVATE KEY') && !priv.includes('BEGIN RSA PRIVATE KEY')) {
+        issues.push('私钥格式异常, 应以 -----BEGIN PRIVATE KEY----- 开头');
+      }
+
+      if (issues.length) {
+        html += `<div class="alert alert-warn" style="margin-top:12px;"><strong>可能的原因:</strong><ul style="margin:6px 0 0 16px; padding:0;">${issues.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+      } else {
+        html += `<div class="alert alert-info" style="margin-top:12px;">未发现明显输入差异。请检查:<br>• 私钥是否跟接入方 App ID 对应的那一对?<br>• 您程序在签名前是否对 Body 做了 URL 编码 / 转义 / 加密?<br>• 您程序签名时的字符编码是否是 UTF-8?</div>`;
+      }
+    }
+
+    out.innerHTML = html;
+  } catch (e) {
+    out.innerHTML = `<div class="alert alert-err">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// ==================== 模式 3: 验签 ====================
+function resetVerifyCert() { $('verifyCert').value = LKL_PUB_CERT_TEST; }
+
+function runVerify() {
+  const out = $('verifyResult');
+  out.innerHTML = '';
+  try {
+    const headersText = $('verifyHeaders').value.trim();
+    const body = $('verifyBody').value;
+    const cert = $('verifyCert').value.trim();
+    if (!headersText || !body || !cert) throw new Error('所有字段都要填');
+
+    // 解析 headers
+    const h = {};
+    headersText.split('\n').forEach(line => {
+      const i = line.indexOf(':');
+      if (i > 0) h[line.slice(0,i).trim().toLowerCase()] = line.slice(i+1).trim().replace(/^"|"$/g,'');
+    });
+
+    const appid = h['lklapi-appid'] || '';
+    const serial = h['lklapi-serial'] || '';
+    const ts = h['lklapi-timestamp'] || '';
+    const nonce = h['lklapi-nonce'] || '';
+    const sig = h['lklapi-signature'] || '';
+
+    const missing = [];
+    if (!serial) missing.push('Lklapi-Serial');
+    if (!ts) missing.push('Lklapi-Timestamp');
+    if (!nonce) missing.push('Lklapi-Nonce');
+    if (!sig) missing.push('Lklapi-Signature');
+    if (missing.length) throw new Error('缺少响应头: ' + missing.join(', '));
+
+    const payload = `${appid}\n${serial}\n${ts}\n${nonce}\n${body}\n`;
+    const ok = verifyRSA(cert, payload, sig);
+    const visiblePayload = payload.replace(/\n/g,'<span class="lf-marker">↵\n</span>');
+
+    out.innerHTML = `
+      <div class="diag-result ${ok?'match':'mismatch'}">
+        <div style="font-size:18px; font-weight:600; margin-bottom:12px;">
+          ${ok ? '✅ 验签通过 — 响应来自拉卡拉，未被篡改' : '❌ 验签失败 — 签名不匹配'}
+        </div>
+        <div class="kv"><div class="kv-label">参与验签的字节 (5 行)</div><div class="kv-value mono-block">${visiblePayload}</div></div>
+        <div class="kv"><div class="kv-label">签名值</div><div class="kv-value">${escapeHtml(sig)}</div></div>
+        ${ok ? '' : `<div class="alert alert-warn" style="margin-top:12px;">如果验签失败, 检查:<ul style="margin:6px 0 0 16px;">
+          <li>响应体是否是<strong>原始字节</strong>(没有被格式化或修改)?</li>
+          <li>使用的证书是否跟当前环境匹配 (测试 vs 生产)?</li>
+          <li>响应头里的 timestamp / nonce / serial 是否跟实际响应一致, 没漏字符?</li>
+        </ul></div>`}
+      </div>
+    `;
+  } catch (e) {
+    out.innerHTML = `<div class="alert alert-err">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// ==================== 模式 4: SM4 加解密工具 ====================
+function runSm4Tool() {
+  const out = $('sm4ToolResult');
+  out.innerHTML = '';
+  try {
+    const key = $('sm4ToolKey').value.trim();
+    const mode = $('sm4ToolMode').value;
+    const input = $('sm4ToolInput').value;  // 不 trim, 保留原始字节
+    if (!key) throw new Error('SM4 密钥不能为空');
+    if (!input) throw new Error('输入不能为空');
+
+    const t0 = performance.now();
+    let result, label;
+    if (mode === 'encrypt') {
+      result = SM4.encrypt(key, input);
+      label = 'Base64 密文';
+    } else {
+      result = SM4.decrypt(key, input.trim());  // 解密时 trim, 防止粘贴尾随空白
+      label = '明文 (UTF-8)';
+    }
+    const elapsed = (performance.now() - t0).toFixed(2);
+
+    let extra = '';
+    if (mode === 'decrypt') {
+      // 尝试美化为 JSON
+      try {
+        const obj = JSON.parse(result);
+        extra = `<div class="kv"><div class="kv-label">解析为 JSON (格式化)</div><div class="kv-value mono-block">${escapeHtml(JSON.stringify(obj, null, 2))}</div></div>`;
+      } catch (e) { /* 不是 JSON 就算了 */ }
+    }
+
+    out.innerHTML = `
+      <div class="diag-result match" style="margin-top:16px;">
+        <div style="font-size:16px; font-weight:600; margin-bottom:12px;">
+          ✅ ${mode === 'encrypt' ? '加密' : '解密'}成功 <span style="font-weight:400; font-size:12px; color:var(--ink-soft);">(${elapsed}ms)</span>
+        </div>
+        <div class="kv"><div class="kv-label">${label}</div><div class="kv-value mono-block">${escapeHtml(result)}</div></div>
+        ${extra}
+      </div>
+    `;
+  } catch (e) {
+    out.innerHTML = `<div class="alert alert-err" style="margin-top:16px;"><strong>${mode==='encrypt'?'加密':'解密'}失败:</strong> ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// 填入拉卡拉文档示例 (用于和您 Java 代码的输出对照)
+function fillSm4DocSample() {
+  $('sm4ToolKey').value = 'dRzPaYd7z6vYn9sL/JTZ3A==';
+  $('sm4ToolMode').value = 'encrypt';
+  $('sm4ToolInput').value = `{
+    "req_time": "20211207145023",
+    "version": "3.0",
+    "req_id": "20211203091231011",
+    "req_data": {
+        "member_id": "AAA200154561278",
+        "activity_id": "1100000086",
+        "owner_id": "80000007",
+        "promotion_id": "FE8D9673C7AD41CBAD2F79DE219F80E0",
+        "channel_mchid": "1610278380",
+        "channel_appid": "wx4654656c083983e6",
+        "channel_openid": "oKL-mwRzR-SBfI4QDAI1QXOpkyc8",
+        "mer_order_id": "202112030923011"
+    }
+}`;
+}
+
+// ==================== 启动 ====================
+$('verifyCert').value = LKL_PUB_CERT_TEST;
+loadSchemas();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "id": "open_merchant_info",
+  "category": "开户进件类接口",
+  "name": "商户信息查询",
+  "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一即可。",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",
+  "url_prod": "https://s2.lakala.com/api/v3/tkbs/open_merchant_info",
+  "doc_url": "",
+  "fields": [
+    { "path": "ver",                   "type": "string", "required": true,  "desc": "版本号 1.0" },
+    { "path": "timestamp",             "type": "string", "required": true,  "desc": "毫秒级时间戳字符串 (工具自动填)" },
+    { "path": "req_id",                "type": "string", "required": true,  "desc": "请求流水号 (工具自动填)" },
+    { "path": "req_data.merchant_no",  "type": "string", "required": false, "desc": "商户号 (与 customer_no 二选一)" },
+    { "path": "req_data.customer_no",  "type": "string", "required": false, "desc": "客户号 (与 merchant_no 二选一)" },
+    { "path": "req_data.org_code",     "type": "string", "required": true,  "desc": "组织代码 (拉卡拉分配)" }
+  ],
+  "example": {
+    "ver": "1.0",
+    "timestamp": "{{timestamp_ms}}",
+    "req_id": "{{req_id}}",
+    "req_data": {
+      "merchant_no": "",
+      "customer_no": "100138867",
+      "org_code": "200028"
+    }
+  },
+  "response_example": {
+    "code": "000000",
+    "msg": "SUCCESS",
+    "resp_data": {
+      "settle_card": { "bank_code": "01030000", "account_no": "6228****5475", "bank_name": "中国农业银行" },
+      "shop_info_list": [{ "shop_id": 32141, "shop_name": "喜相逢酒店" }],
+      "product_vos": [{ "product": "WECHAT_PAY", "product_name": "专业化扫码" }],
+      "terminal_info": [{ "term_type_name": "APP收款", "term_no_list": ["A9348031"] }],
+      "customer": { "customer_no": 100138867, "mer_name": "喜相逢酒店", "customer_status": "OPEN" }
+    }
+  }
+}

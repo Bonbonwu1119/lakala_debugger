@@ -1,0 +1,29 @@
+{
+  "name": "lakala-debugger",
+  "version": "1.0.0",
+  "description": "拉卡拉接口调试工具 - 加签/验签/SM4 加解密/参数诊断",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:win": "pkg . --targets node20-win-x64 --output dist/lakala-debugger.exe",
+    "build:mac": "pkg . --targets node20-macos-x64 --output dist/lakala-debugger-mac",
+    "build:mac-arm": "pkg . --targets node20-macos-arm64 --output dist/lakala-debugger-mac-arm",
+    "build": "pkg . --targets node20-win-x64,node20-macos-x64,node20-macos-arm64 --out-path dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true,
+  "pkg": {
+    "assets": [
+      "public/**/*"
+    ],
+    "targets": [
+      "node20-win-x64"
+    ]
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.16.1"
+  }
+}

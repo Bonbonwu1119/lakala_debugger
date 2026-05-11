@@ -1,0 +1,49 @@
+{
+  "id": "coupon_member_query",
+  "category": "附加功能类接口",
+  "name": "营销活动会员查询 (SM4 加密样例)",
+  "description": "示例接口，演示 SM4 整报文加密。req_data 字段在请求时整体 SM4 加密，响应的 resp_data 也是 SM4 加密。如果您接入的接口签名+加密对不上，可参照本示例查看预期格式。注意：URL 为占位，按您拿到的接口文档替换。",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/coupon/activity/member/query",
+  "url_prod": "https://s2.lakala.com/api/v3/labs/coupon/activity/member/query",
+  "doc_url": "https://o.lakala.com",
+  "encrypt": {
+    "request":  { "mode": "all", "path": "req_data" },
+    "response": { "mode": "all", "path": "resp_data" }
+  },
+  "fields": [
+    { "path": "version",  "type": "string", "required": true,  "desc": "接口版本号，固定 3.0" },
+    { "path": "req_time", "type": "string", "required": true,  "desc": "请求时间，yyyyMMddHHmmss (工具自动填)" },
+    { "path": "req_id",   "type": "string", "required": true,  "desc": "请求流水号 (工具自动填)" },
+    { "path": "req_data", "type": "object", "required": true,  "desc": "业务参数对象 — 整体会被 SM4 加密成 Base64 字符串后再发送" },
+    { "path": "req_data.member_id",     "type": "string", "required": true, "desc": "会员 ID" },
+    { "path": "req_data.activity_id",   "type": "string", "required": true, "desc": "活动 ID" },
+    { "path": "req_data.owner_id",      "type": "string", "required": false, "desc": "归属方 ID" },
+    { "path": "req_data.promotion_id",  "type": "string", "required": false, "desc": "营销活动 ID" },
+    { "path": "req_data.channel_mchid", "type": "string", "required": false, "desc": "渠道商户号" },
+    { "path": "req_data.channel_appid", "type": "string", "required": false, "desc": "渠道 AppID" },
+    { "path": "req_data.channel_openid","type": "string", "required": false, "desc": "渠道用户 OpenID" },
+    { "path": "req_data.mer_order_id",  "type": "string", "required": false, "desc": "商户订单号" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_id": "{{out_trade_no}}",
+    "req_data": {
+      "member_id": "AAA200154561278",
+      "activity_id": "1100000086",
+      "owner_id": "80000007",
+      "promotion_id": "FE8D9673C7AD41CBAD2F79DE219F80E0",
+      "channel_mchid": "1610278380",
+      "channel_appid": "wx4654656c083983e6",
+      "channel_openid": "oKL-mwRzR-SBfI4QDAI1QXOpkyc8",
+      "mer_order_id": "{{out_trade_no}}"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20211207145024",
+    "resp_data": "<SM4 加密的 Base64 字符串，解密后是真正的 JSON 对象>"
+  }
+}

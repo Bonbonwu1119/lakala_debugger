@@ -1,0 +1,24 @@
+# 依赖
+node_modules/
+package-lock.json.bak
+
+# 构建产物 (大体积 .exe / Mac 二进制走 GitHub Releases 发布, 不进 git)
+dist/
+
+# 临时打包文件
+lakala-debugger-deploy.tar.gz
+lakala-debugger.tar.gz
+
+# 密钥 / 证书 (千万不能提交!)
+*.pem
+*.key
+腾讯云首尔服务器登录秘钥/
+.env
+.env.*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
