@@ -10,7 +10,7 @@
   "fields": [
     { "path": "version",                  "required": true,  "desc": "接口版本号 3.0" },
     { "path": "req_time",                 "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
-    { "path": "out_org_code",             "required": false, "desc": "组织代码" },
+    { "path": "out_org_code",             "required": false, "desc": "拉卡拉分配的机构号 (例: OP00000003)" },
     { "path": "req_data.merchant_no",     "required": true,  "desc": "商户号" },
     { "path": "req_data.term_no",         "required": true,  "desc": "终端号" },
     { "path": "req_data.out_trade_no",    "required": false, "desc": "商户交易流水号 (与 trade_no 二选一)" },
