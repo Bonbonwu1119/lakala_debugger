@@ -245,6 +245,26 @@
   .tree-empty-note { padding: 6px 8px 6px 22px; color: var(--ink-soft); font-size: 11px; font-style: italic; }
   .tree-no-match { padding: 12px 8px; color: var(--ink-soft); font-size: 12px; text-align: center; font-style: italic; }
 
+  /* 公钥证书弹窗 */
+  .cert-dialog {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .cert-dialog-content {
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    width: 92%; max-width: 720px; max-height: 86vh; overflow-y: auto;
+    padding: 20px 24px;
+  }
+  .cert-dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cert-dialog-head h3 { margin: 0; font-family: "Noto Serif SC", serif; font-size: 18px; }
+  .cert-dialog-close {
+    background: none; border: 0; font-size: 22px; cursor: pointer; color: var(--ink-soft);
+    line-height: 1; padding: 4px 10px; border-radius: 4px;
+  }
+  .cert-dialog-close:hover { background: var(--code-bg); color: var(--ink); }
+
   /* 当前接口信息条 */
   .iface-info-strip {
     background: var(--card); border: 1px solid var(--line); border-radius: 6px;
@@ -271,16 +291,40 @@
 <header>
   <div>
     <h1>拉卡拉调试工具</h1>
-    <div class="header-meta">SHA256withRSA · 加签 / 验签 / 字段诊断</div>
+    <div class="header-meta">SHA256withRSA · 加签 / 验签 · SM4 加解密</div>
   </div>
-  <div>
-    环境:
-    <select id="envSelect" class="env-pill" onchange="onEnvChange()">
-      <option value="test">测试环境</option>
-      <option value="prod">生产环境</option>
-    </select>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <button class="btn btn-accent" onclick="showCertDialog()" title="查看 / 复制 / 下载 拉卡拉测试公钥证书 lkl-apigw-v2.cer">📜 公钥证书</button>
+    <span>环境:
+      <select id="envSelect" class="env-pill" onchange="onEnvChange()">
+        <option value="test">测试环境</option>
+        <option value="prod">生产环境</option>
+      </select>
+    </span>
   </div>
 </header>
+
+<!-- 公钥证书弹窗 -->
+<div id="certDialog" class="cert-dialog" style="display:none;" onclick="if(event.target===this) hideCertDialog()">
+  <div class="cert-dialog-content">
+    <div class="cert-dialog-head">
+      <h3>拉卡拉测试公钥证书 (lkl-apigw-v2.cer)</h3>
+      <button class="cert-dialog-close" onclick="hideCertDialog()" title="关闭">×</button>
+    </div>
+    <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">
+      用途：验证拉卡拉返回的响应签名 / 异步通知签名是否真实。<br>
+      ⚠ 这是<strong>测试环境</strong>证书，生产环境另有一张证书需向拉卡拉申请。
+    </p>
+    <div class="kv">
+      <div class="kv-label">PEM 内容 (工具已内嵌, 验签时自动使用)</div>
+      <div class="kv-value mono-block" id="certPemBox" style="font-size:11px; max-height: 280px; overflow-y: auto;"></div>
+    </div>
+    <div class="btn-row" style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="copyCert()">📋 复制 PEM 内容</button>
+      <a class="btn" target="_blank" href="https://lkl-zf-public-bs-lama-test.oss-cn-shanghai.aliyuncs.com/merchantKey/LKL/lkl-apigw-v2.cer">⬇ 下载原始 .cer 文件</a>
+    </div>
+  </div>
+</div>
 
 <!-- 模式切换 -->
 <div class="mode-bar">
@@ -3937,6 +3981,13 @@ function renderResponse({respStatus, respText, respHeaders, fetchErr}) {
     verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value"><span class="badge badge-warn">无 Lklapi-Signature 响应头</span></div></div>`;
   }
 
+  // 拉卡拉返回的 traceid (查问题时给研发用)
+  let traceHtml = '';
+  const lklTraceId = (respHeaders['lklapi-traceid']||'').replace(/^"|"$/g,'');
+  if (lklTraceId) {
+    traceHtml = `<div class="kv"><div class="kv-label">Lklapi-Traceid (报问题给拉卡拉研发时附上此 ID)</div><div class="kv-value" style="background:#fff7e6; border-left-color:var(--accent);">${escapeHtml(lklTraceId)}</div></div>`;
+  }
+
   let statusBadge;
   if (respStatus>=200 && respStatus<300) statusBadge = `<span class="badge badge-ok">${respStatus}</span>`;
   else if (respStatus>=400) statusBadge = `<span class="badge badge-err">${respStatus}</span>`;
@@ -3954,6 +4005,7 @@ function renderResponse({respStatus, respText, respHeaders, fetchErr}) {
     <div class="kv"><div class="kv-label">HTTP 状态</div><div class="kv-value">${statusBadge}</div></div>
     ${bizBadge}
     ${verifyHtml}
+    ${traceHtml}
     ${decryptHtml}
     ${cipherBlock}
     <div class="kv"><div class="kv-label">${bodyLabel}</div><div class="kv-value mono-block">${escapeHtml(prettyBody)}</div></div>
@@ -4028,6 +4080,21 @@ function runDiagnose() {
   } catch (e) {
     out.innerHTML = `<div class="alert alert-err">${escapeHtml(e.message)}</div>`;
   }
+}
+
+// ==================== 公钥证书弹窗 ====================
+function showCertDialog() {
+  $('certPemBox').textContent = LKL_PUB_CERT_TEST;
+  $('certDialog').style.display = 'flex';
+}
+function hideCertDialog() { $('certDialog').style.display = 'none'; }
+function copyCert() {
+  navigator.clipboard.writeText(LKL_PUB_CERT_TEST).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已复制到剪贴板';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
 }
 
 // ==================== 模式 3: 验签 ====================
