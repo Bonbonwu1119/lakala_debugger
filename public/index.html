@@ -329,38 +329,60 @@
       <div class="toolbar-item-sub">所有"发送请求"和接口 URL 跟随此环境切换</div>
     </div>
   </div>
-  <div class="toolbar-item">
+  <div class="toolbar-item" id="certCard">
     <div class="toolbar-item-icon">📜</div>
     <div class="toolbar-item-body">
-      <div class="toolbar-item-label">验签公钥证书 (测试环境)</div>
+      <div class="toolbar-item-label" id="certCardLabel">验签公钥证书 (测试环境)</div>
       <div class="toolbar-item-main">
-        <button class="toolbar-cert-btn" onclick="showCertDialog()">查看 / 复制 / 下载</button>
+        <button class="toolbar-cert-btn" onclick="showCertDialog()">查看 / 上传 / 复制</button>
       </div>
-      <div class="toolbar-item-sub">拉卡拉签发, 用于验证拉卡拉响应 / 异步通知的签名 (lkl-apigw-v2.cer)</div>
+      <div class="toolbar-item-sub" id="certCardSub">拉卡拉签发, 用于验证拉卡拉响应 / 异步通知的签名 (lkl-apigw-v2.cer)</div>
     </div>
   </div>
 </div>
 
 <!-- 公钥证书弹窗 -->
-
-<!-- 公钥证书弹窗 -->
 <div id="certDialog" class="cert-dialog" style="display:none;" onclick="if(event.target===this) hideCertDialog()">
   <div class="cert-dialog-content">
     <div class="cert-dialog-head">
-      <h3>拉卡拉测试公钥证书 (lkl-apigw-v2.cer)</h3>
+      <h3>拉卡拉验签公钥证书</h3>
       <button class="cert-dialog-close" onclick="hideCertDialog()" title="关闭">×</button>
     </div>
-    <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 12px;">
-      用途：验证拉卡拉返回的响应签名 / 异步通知签名是否真实。<br>
-      ⚠ 这是<strong>测试环境</strong>证书，生产环境另有一张证书需向拉卡拉申请。
-    </p>
-    <div class="kv">
-      <div class="kv-label">PEM 内容 (工具已内嵌, 验签时自动使用)</div>
-      <div class="kv-value mono-block" id="certPemBox" style="font-size:11px; max-height: 280px; overflow-y: auto;"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchCertTab(event,'cert-panel-test')">测试环境 (已内嵌)</button>
+      <button class="tab" onclick="switchCertTab(event,'cert-panel-prod')">生产环境 (需上传)</button>
     </div>
-    <div class="btn-row" style="margin-top: 12px;">
-      <button class="btn btn-primary" onclick="copyCert()">📋 复制 PEM 内容</button>
-      <a class="btn" target="_blank" href="https://lkl-zf-public-bs-lama-test.oss-cn-shanghai.aliyuncs.com/merchantKey/LKL/lkl-apigw-v2.cer">⬇ 下载原始 .cer 文件</a>
+
+    <div class="tab-content active" id="cert-panel-test">
+      <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 10px;">
+        测试环境验签公钥 (<code>lkl-apigw-v2.cer</code>), 工具已内嵌, env=test 时验签自动使用. 拉卡拉公开提供.
+      </p>
+      <div class="kv">
+        <div class="kv-label">PEM 内容</div>
+        <div class="kv-value mono-block" id="certPemBox" style="font-size:11px; max-height: 240px; overflow-y: auto;"></div>
+      </div>
+      <div class="btn-row" style="margin-top: 12px;">
+        <button class="btn btn-primary" onclick="copyCert('test')">📋 复制 PEM</button>
+        <a class="btn" target="_blank" href="https://lkl-zf-public-bs-lama-test.oss-cn-shanghai.aliyuncs.com/merchantKey/LKL/lkl-apigw-v2.cer">⬇ 下载原始 .cer</a>
+      </div>
+    </div>
+
+    <div class="tab-content" id="cert-panel-prod">
+      <p style="font-size: 13px; color: var(--ink-soft); margin-bottom: 10px;">
+        ⚠ 生产环境的验签公钥需要 <strong>您向拉卡拉申请</strong> (跟测试环境不同).<br>
+        粘贴 PEM 内容或选择 .cer 文件后点 "保存". 工具会写入 <strong>浏览器本地 (localStorage)</strong>, 下次自动加载, 不会上传服务器.
+      </p>
+      <label>粘贴 PEM 内容 (<code>-----BEGIN CERTIFICATE-----</code> 开头)</label>
+      <textarea id="prodCertInput" rows="10" placeholder="-----BEGIN CERTIFICATE-----&#10;MIIE...&#10;-----END CERTIFICATE-----" style="font-family: 'JetBrains Mono', monospace; font-size: 11px;"></textarea>
+      <div class="btn-row" style="margin-top: 8px;">
+        <input type="file" id="prodCertFile" accept=".cer,.crt,.pem,.txt" style="display:none" onchange="loadProdCertFile(event)">
+        <button class="btn" onclick="document.getElementById('prodCertFile').click()">📂 选 .cer / .pem 文件</button>
+        <button class="btn btn-primary" onclick="saveProdCert()">💾 保存到浏览器</button>
+        <button class="btn" onclick="clearProdCert()">🗑 清除</button>
+        <button class="btn" onclick="copyCert('prod')">📋 复制 PEM</button>
+      </div>
+      <div id="prodCertStatus" style="margin-top: 10px;"></div>
     </div>
   </div>
 </div>
@@ -3604,6 +3626,8 @@ function onEnvChange() {
     envBox && envBox.classList.remove('is-prod');
     sel && sel.classList.remove('prod');
   }
+  // 联动公钥证书卡片的标题/副标
+  updateToolbarCertStatus();
 }
 
 function loadExampleBody() {
@@ -4018,14 +4042,21 @@ function renderResponse({respStatus, respText, respHeaders, fetchErr}) {
     prettyBody = JSON.stringify(j, null, 2);
   } catch (e) { prettyBody = displayText; }
 
-  // 验签
+  // 验签 — 按当前环境选证书
   let verifyHtml = '';
   const lklSign = (respHeaders['lklapi-signature']||'').replace(/^"|"$/g,'');
   if (lklSign) {
     const payload = `${respHeaders['lklapi-appid']||''}\n${respHeaders['lklapi-serial']||''}\n${respHeaders['lklapi-timestamp']||''}\n${respHeaders['lklapi-nonce']||''}\n${respText}\n`;
-    let ok=false, err='';
-    try { ok = verifyRSA(LKL_PUB_CERT_TEST, payload, lklSign); } catch(e){ err=e.message; }
-    verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value">${ok?'<span class="badge badge-ok">✓ 验签通过</span>':`<span class="badge badge-err">✗ 验签失败</span> ${escapeHtml(err)}`}</div></div>`;
+    const cert = getEnvCert();
+    if (!cert) {
+      // 生产环境但未上传证书
+      verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value"><span class="badge badge-warn">⚠ 生产环境验签证书未上传, 跳过验签. 点顶部 "📜 验签公钥证书" 卡片上传.</span></div></div>`;
+    } else {
+      let ok=false, err='';
+      try { ok = verifyRSA(cert, payload, lklSign); } catch(e){ err=e.message; }
+      const certLabel = (ENV === 'prod') ? '(用生产证书)' : '(用测试证书)';
+      verifyHtml = `<div class="kv"><div class="kv-label">响应验签 ${certLabel}</div><div class="kv-value">${ok?'<span class="badge badge-ok">✓ 验签通过</span>':`<span class="badge badge-err">✗ 验签失败</span> ${escapeHtml(err)}`}</div></div>`;
+    }
   } else {
     verifyHtml = `<div class="kv"><div class="kv-label">响应验签</div><div class="kv-value"><span class="badge badge-warn">无 Lklapi-Signature 响应头</span></div></div>`;
   }
@@ -4132,18 +4163,124 @@ function runDiagnose() {
 }
 
 // ==================== 公钥证书弹窗 ====================
+const PROD_CERT_LS_KEY = 'lakala_debugger_prod_cert_v1';
+let LKL_PUB_CERT_PROD = '';   // 用户上传的生产环境证书 (从 localStorage 恢复)
+
+function loadProdCertFromStorage() {
+  try {
+    const v = localStorage.getItem(PROD_CERT_LS_KEY);
+    if (v && v.trim().startsWith('-----BEGIN')) LKL_PUB_CERT_PROD = v;
+  } catch (e) { /* localStorage 不可用就算了 */ }
+}
+
 function showCertDialog() {
   $('certPemBox').textContent = LKL_PUB_CERT_TEST;
+  $('prodCertInput').value = LKL_PUB_CERT_PROD || '';
+  updateProdCertStatus();
   $('certDialog').style.display = 'flex';
 }
 function hideCertDialog() { $('certDialog').style.display = 'none'; }
-function copyCert() {
-  navigator.clipboard.writeText(LKL_PUB_CERT_TEST).then(() => {
+
+function switchCertTab(e, panelId) {
+  const tabs = e.currentTarget.parentElement;
+  tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  // 找到同级所有 tab-content
+  tabs.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+function copyCert(which) {
+  const txt = (which === 'prod') ? ($('prodCertInput').value || LKL_PUB_CERT_PROD) : LKL_PUB_CERT_TEST;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(() => {
     const btn = event.target;
     const orig = btn.textContent;
-    btn.textContent = '✓ 已复制到剪贴板';
+    btn.textContent = '✓ 已复制';
     setTimeout(() => btn.textContent = orig, 1500);
   });
+}
+
+function loadProdCertFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    $('prodCertInput').value = r.result.trim();
+  };
+  r.readAsText(f);
+}
+
+function saveProdCert() {
+  const txt = $('prodCertInput').value.trim();
+  if (!txt) { showProdCertStatus('err', '内容为空'); return; }
+  if (!txt.startsWith('-----BEGIN CERTIFICATE-----')) {
+    showProdCertStatus('err', '格式不对, 应该以 "-----BEGIN CERTIFICATE-----" 开头');
+    return;
+  }
+  if (!txt.includes('-----END CERTIFICATE-----')) {
+    showProdCertStatus('err', '格式不对, 缺少 "-----END CERTIFICATE-----" 结尾');
+    return;
+  }
+  try {
+    // 用 jsrsasign 试解析, 失败说明不是合法 PEM
+    const k = KEYUTIL.getKey(txt);
+    if (!k) throw new Error('无法解析');
+    LKL_PUB_CERT_PROD = txt;
+    localStorage.setItem(PROD_CERT_LS_KEY, txt);
+    showProdCertStatus('ok', '✓ 已保存到浏览器 (localStorage). 下次自动加载. 当前环境如果是生产环境, 现在起会用这个证书做验签.');
+    updateToolbarCertStatus();
+  } catch (e) {
+    showProdCertStatus('err', '证书无法解析: ' + e.message);
+  }
+}
+
+function clearProdCert() {
+  LKL_PUB_CERT_PROD = '';
+  $('prodCertInput').value = '';
+  try { localStorage.removeItem(PROD_CERT_LS_KEY); } catch (e) {}
+  showProdCertStatus('warn', '已清除. 生产环境验签将报"无证书"错误.');
+  updateToolbarCertStatus();
+}
+
+function showProdCertStatus(level, msg) {
+  const el = $('prodCertStatus');
+  const cls = level === 'ok' ? 'alert-ok' : (level === 'err' ? 'alert-err' : 'alert-warn');
+  el.innerHTML = `<div class="alert ${cls}">${escapeHtml(msg)}</div>`;
+}
+
+function updateProdCertStatus() {
+  const has = !!LKL_PUB_CERT_PROD;
+  showProdCertStatus(
+    has ? 'ok' : 'warn',
+    has ? '✓ 已配置生产环境验签证书 (从浏览器本地加载)' : '未上传生产环境验签证书. env=prod 时验签会跳过.'
+  );
+}
+
+// 顶部工具栏 "验签公钥证书" 卡片副标题随环境/证书状态变化
+function updateToolbarCertStatus() {
+  const sub = document.querySelector('#certCardSub');
+  const label = document.querySelector('#certCardLabel');
+  if (!sub || !label) return;
+  if (ENV === 'prod') {
+    if (LKL_PUB_CERT_PROD) {
+      label.textContent = '验签公钥证书 (生产环境, 已配置)';
+      sub.textContent = '已用您上传的生产环境证书做验签. 点击查看 / 替换 / 清除.';
+      sub.style.color = '';
+    } else {
+      label.textContent = '验签公钥证书 (生产环境, ⚠ 未上传)';
+      sub.innerHTML = '<strong style="color:var(--err);">生产环境验签会跳过, 请点击上传向拉卡拉申请的证书</strong>';
+    }
+  } else {
+    label.textContent = '验签公钥证书 (测试环境)';
+    sub.textContent = '拉卡拉签发, 用于验证拉卡拉响应 / 异步通知的签名 (lkl-apigw-v2.cer)';
+    sub.style.color = '';
+  }
+}
+
+// 拉响应验签 + 验证响应 tab 用这个函数取当前环境的证书
+function getEnvCert() {
+  return (ENV === 'prod') ? LKL_PUB_CERT_PROD : LKL_PUB_CERT_TEST;
 }
 
 // ==================== 模式 3: 验签 ====================
@@ -4321,6 +4458,8 @@ function fillSm4DocSample() {
 
 // ==================== 启动 ====================
 $('verifyCert').value = LKL_PUB_CERT_TEST;
+loadProdCertFromStorage();
+updateToolbarCertStatus();
 loadSchemas();
 </script>
 </body>
