@@ -1560,7 +1560,7 @@ const INLINE_SCHEMAS = {
     "id": "aggregate_passive_scan",
     "category": "支付交易类接口",
     "name": "聚合被扫 (商户扫用户码)",
-    "description": "聚合支付 - 被扫场景: 商户终端扫用户 App 里的付款码 (条形码/二维码) 完成支付. 支持微信(10-15开头)/支付宝(25-30开头)/银联(62开头)/数币(01开头)/翼支付(51开头)/苏宁(83开头). 请求/响应明文 JSON, 仅加签/验签.",
+    "description": "聚合支付 - 被扫场景: 商户终端读取用户 App 里的付款码 (条形码 / 二维码) 完成支付.\n\nauth_code 前缀决定钱包类型 account_type:\n  10-15 → 微信 (WECHAT)\n  25-30 → 支付宝 (ALIPAY)\n  62    → 银联 (UQRCODEPAY)\n  01    → 数币人民币 (DCPAY)\n  51    → 翼支付 (BESTPAY)\n  83    → 苏宁 (SUNING)\n\n⚠ 测试环境对金额有限制, total_amount 建议固定填 \"1\" (= 1 分).\n请求 / 响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签 / 验签.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/micropay",
     "url_prod": "https://s2.lakala.com/api/v3/labs/trans/micropay",
@@ -1579,37 +1579,42 @@ const INLINE_SCHEMAS = {
       {
         "path": "out_org_code",
         "required": false,
-        "desc": "组织代码"
+        "desc": "组织代码 (机构方代发场景, 例: OP00000003)"
+      },
+      {
+        "path": "notify_url",
+        "required": false,
+        "desc": "顶层通知地址 (部分接入方在此填; 也可填 req_data.notify_url)"
       },
       {
         "path": "req_data.merchant_no",
         "required": true,
-        "desc": "商户号"
+        "desc": "商户号 (拉卡拉分配). 测试环境用 82229007392000A"
       },
       {
         "path": "req_data.term_no",
         "required": true,
-        "desc": "终端号"
+        "desc": "终端号 (拉卡拉分配的业务终端). 被扫测试可用 D9296400"
       },
       {
         "path": "req_data.out_trade_no",
         "required": true,
-        "desc": "商户交易流水号, 不可重复"
+        "desc": "商户交易流水号, 商户系统唯一不可重复"
       },
       {
         "path": "req_data.auth_code",
         "required": true,
-        "desc": "支付授权码 (设备读取用户 App 里的付款码), 不同账户类型前缀不同"
+        "desc": "支付授权码 (设备读取用户 App 里的付款码字符串). 前缀决定钱包类型: 10-15=微信 / 25-30=支付宝 / 62=银联 / 01=数币 / 51=翼支付 / 83=苏宁"
       },
       {
         "path": "req_data.total_amount",
         "required": true,
-        "desc": "金额, 单位: 分"
+        "desc": "金额, 单位: 分 (字符串). 测试环境必须填 \"1\" (= 1 分)"
       },
       {
         "path": "req_data.location_info",
         "required": true,
-        "desc": "地址位置信息"
+        "desc": "地址位置信息 (风控要求)"
       },
       {
         "path": "req_data.location_info.request_ip",
@@ -1617,24 +1622,34 @@ const INLINE_SCHEMAS = {
         "desc": "请求方 IP"
       },
       {
+        "path": "req_data.location_info.location",
+        "required": false,
+        "desc": "纬度,经度 (注: 被扫接口用逗号分隔, 跟主扫的 +纬度/+经度 格式不同)"
+      },
+      {
+        "path": "req_data.location_info.base_station",
+        "required": false,
+        "desc": "基站信息"
+      },
+      {
+        "path": "req_data.notify_url",
+        "required": false,
+        "desc": "异步通知地址"
+      },
+      {
         "path": "req_data.busi_mode",
         "required": false,
-        "desc": "业务模式: ACQ-收单"
+        "desc": "业务模式: ACQ-收单 (默认)"
       },
       {
         "path": "req_data.subject",
         "required": false,
-        "desc": "订单标题"
+        "desc": "订单标题 (最多 42 字符)"
       },
       {
         "path": "req_data.pay_order_no",
         "required": false,
         "desc": "拉卡拉支付业务订单号"
-      },
-      {
-        "path": "req_data.notify_url",
-        "required": false,
-        "desc": "商户通知地址"
       },
       {
         "path": "req_data.settle_type",
@@ -1644,7 +1659,17 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.scan_type",
         "required": false,
-        "desc": "扫码类型: 0=普通扫码 1=微信刷脸 3=押金支付..."
+        "desc": "扫码类型: 0=普通扫码 (默认) / 1=微信刷脸支付 / 3=押金支付"
+      },
+      {
+        "path": "req_data.remark",
+        "required": false,
+        "desc": "备注"
+      },
+      {
+        "path": "req_data.promo_info",
+        "required": false,
+        "desc": "拉卡拉优惠相关信息"
       },
       {
         "path": "req_data.acc_busi_fields",
@@ -1654,28 +1679,36 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.out_order_no",
         "required": false,
-        "desc": "外部订单号"
+        "desc": "商品订单号 (动态码关联订单场景)"
+      },
+      {
+        "path": "req_data.pnr_ins_id_cd",
+        "required": false,
+        "desc": "银联服务商机构标识码 (银联场景)"
       },
       {
         "path": "req_data.term_info",
         "required": false,
-        "desc": "终端信息 (加密因子/密文数据)"
+        "desc": "终端信息 (加密因子 / 密文数据)"
       }
     ],
     "example": {
       "req_time": "{{req_time}}",
       "version": "3.0",
+      "out_org_code": "OP00000003",
+      "notify_url": "https://example.com/notify",
       "req_data": {
         "merchant_no": "82229007392000A",
-        "term_no": "29834765",
+        "term_no": "D9296400",
         "out_trade_no": "{{out_trade_no}}",
-        "auth_code": "135178236713755638",
-        "total_amount": "123",
+        "auth_code": "130845690645325413",
+        "total_amount": "1",
+        "notify_url": "https://example.com/notify",
         "location_info": {
-          "request_ip": "192.168.1.1"
-        },
-        "notify_url": "http://example.com/notify",
-        "subject": "测试订单"
+          "notify_url": "https://example.com/notify",
+          "request_ip": "10.176.1.192",
+          "location": "+37.123456789,-121.123456789"
+        }
       }
     },
     "response_example": {
@@ -1684,10 +1717,14 @@ const INLINE_SCHEMAS = {
       "resp_time": "20240626155843",
       "resp_data": {
         "merchant_no": "82229007392000A",
-        "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E",
+        "out_trade_no": "...",
+        "trade_no": "2024062600210683600877",
+        "log_no": "00210683600877",
         "account_type": "WECHAT",
-        "total_amount": "123",
-        "trade_state": "SUCCESS"
+        "total_amount": "1",
+        "payer_amount": "1",
+        "trade_state": "SUCCESS",
+        "trade_time": "20240626155827"
       }
     }
   },
