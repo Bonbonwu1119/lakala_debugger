@@ -2131,7 +2131,7 @@ const INLINE_SCHEMAS = {
     "id": "refund",
     "category": "支付交易类接口",
     "name": "统一退货 (前置退货系统)",
-    "description": "对原交易做退货. 原交易必须是已成功状态. 通过 origin_log_no / origin_out_trade_no / origin_trade_no 任一定位原交易. 支持全额或部分退货. 异步处理, 调用后建议 30s 后再调用退货查询接口. 请求/响应明文 JSON.",
+    "description": "对原交易做退货. 主/被扫交易和收银台交易都走这个接口.\n\n⚠ 关键约束:\n  1) merchant_no / term_no 必须取自原交易的回调或查询结果, 否则退款匹配不到原交易订单的商终号.\n  2) 定位原交易: 优先用 origin_log_no (来自原交易回调/查询的 log_no) 或 origin_trade_no (来自原交易回调/查询的 trade_no).\n      origin_out_trade_no 只对主/被扫交易有效 (收银台没有 out_trade_no, 只有 out_order_no, 所以收银台退款不能用 origin_out_trade_no).\n  3) req_data.out_trade_no 是这次退款请求的流水号, 商户系统每次退款都必须用全新值, 全局唯一.\n  4) 退款是同步接口, 但同步响应不明确时, 等 30s 用退款查询接口拿最终结果.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/rfd/refund_front/refund",
     "url_prod": "https://s2.lakala.com/api/v3/rfd/refund_front/refund",
@@ -2150,22 +2150,22 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.merchant_no",
         "required": true,
-        "desc": "商户号 (拉卡拉分配, 长度 15)"
+        "desc": "商户号 (长度 15). 必须取自原交易成功回调或查询结果中的 merchant_no, 否则退款不到原订单"
       },
       {
         "path": "req_data.term_no",
         "required": true,
-        "desc": "终端号 (拉卡拉分配, 长度 8)"
+        "desc": "终端号 (长度 8). 必须取自原交易成功回调或查询结果中的 term_no"
       },
       {
         "path": "req_data.out_trade_no",
         "required": true,
-        "desc": "商户请求流水号, 商户系统唯一, 此次退货操作的流水号 (不是原交易流水号)"
+        "desc": "本次退款请求的商户流水号, 全局唯一. 每次退款都要换新值, 不能复用原交易的流水号"
       },
       {
         "path": "req_data.refund_amount",
         "required": true,
-        "desc": "退款金额, 单位: 分, 正整数字符串"
+        "desc": "退款金额, 单位: 分, 正整数字符串. 可全额或部分退"
       },
       {
         "path": "req_data.location_info",
@@ -2178,24 +2178,24 @@ const INLINE_SCHEMAS = {
         "desc": "请求方 IP"
       },
       {
-        "path": "req_data.refund_reason",
-        "required": false,
-        "desc": "退货原因"
-      },
-      {
         "path": "req_data.origin_log_no",
         "required": false,
-        "desc": "原拉卡拉对账单流水号 (与 origin_out_trade_no / origin_trade_no 任一)"
-      },
-      {
-        "path": "req_data.origin_out_trade_no",
-        "required": false,
-        "desc": "原商户交易流水号"
+        "desc": "[首选] 原拉卡拉对账单流水号, 取自原交易回调/查询里的 log_no. 适用所有交易类型"
       },
       {
         "path": "req_data.origin_trade_no",
         "required": false,
-        "desc": "原拉卡拉交易订单号"
+        "desc": "[次选] 原拉卡拉交易订单号, 取自原交易回调/查询里的 trade_no. 适用所有交易类型"
+      },
+      {
+        "path": "req_data.origin_out_trade_no",
+        "required": false,
+        "desc": "[仅主/被扫] 原商户交易流水号. 收银台交易没有 out_trade_no, 不能用这个字段, 改用 origin_log_no / origin_trade_no"
+      },
+      {
+        "path": "req_data.refund_reason",
+        "required": false,
+        "desc": "退货原因"
       },
       {
         "path": "req_data.refund_acc_mode",
@@ -2205,7 +2205,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.notify_url",
         "required": false,
-        "desc": "后台通知地址 (退货成功后异步回调)"
+        "desc": "异步通知地址 (退货成功后通知)"
       },
       {
         "path": "req_data.refund_amt_sts",
@@ -2232,11 +2232,11 @@ const INLINE_SCHEMAS = {
         "out_trade_no": "{{out_trade_no}}",
         "refund_amount": "1",
         "refund_reason": "用户申请退款",
-        "origin_out_trade_no": "原交易商户流水号",
+        "origin_log_no": "原交易 log_no, 从原交易成功回调或查询响应里取",
         "location_info": {
-          "request_ip": "192.168.1.1"
+          "request_ip": "10.176.1.192"
         },
-        "notify_url": "http://example.com/refund-notify"
+        "notify_url": "https://example.com/refund-notify"
       }
     },
     "response_example": {
@@ -2247,12 +2247,13 @@ const INLINE_SCHEMAS = {
         "trade_state": "SUCCESS",
         "refund_type": "PART",
         "merchant_no": "82229007392000A",
-        "out_trade_no": "TEST123456",
-        "trade_no": "2024062600210683600877",
-        "log_no": "00210683600877",
+        "out_trade_no": "本次退款 out_trade_no",
+        "trade_no": "本次退款生成的拉卡拉交易流水号",
+        "log_no": "本次退款生成的拉卡拉对账单流水号",
+        "origin_log_no": "原交易 log_no",
+        "origin_trade_no": "原交易 trade_no",
         "total_amount": "100",
         "refund_amount": "1",
-        "payer_amount": "1",
         "trade_time": "20240626155843"
       }
     }
