@@ -13,7 +13,7 @@
     { "path": "reqTime",                            "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
     { "path": "reqData.version",                    "required": true,  "desc": "业务接口版本号 1.0" },
     { "path": "reqData.orderNo",                    "required": true,  "desc": "订单编号" },
-    { "path": "reqData.orgCode",                    "required": true,  "desc": "机构代码" },
+    { "path": "reqData.orgCode",                    "required": true,  "desc": "机构代码. 自己拓客进件产生的商户 → 1951582; 拉卡拉分配的商户 → 1" },
     { "path": "reqData.receiverName",               "required": true,  "desc": "分账接收方名称" },
     { "path": "reqData.contactMobile",              "required": true,  "desc": "联系手机号" },
     { "path": "reqData.licenseNo",                  "required": false, "desc": "营业执照号码" },
@@ -40,7 +40,7 @@
     "reqData": {
       "version": "1.0",
       "orderNo": "{{out_trade_no}}",
-      "orgCode": "1058036",
+      "orgCode": "1951582",
       "receiverName": "分账接收方测试00",
       "contactMobile": "13728421998",
       "acctNo": "6222020206116171117",
@@ -59,7 +59,7 @@
     "respData": {
       "version": "1.0",
       "orderNo": "...",
-      "orgCode": "1058036",
+      "orgCode": "1951582",
       "orgId": "1058036",
       "orgName": "红星集团",
       "receiverNo": "SR202302231803"

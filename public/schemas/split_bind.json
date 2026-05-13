@@ -29,7 +29,7 @@
     "reqData": {
       "version": "1.0",
       "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
-      "orgCode": "200009",
+      "orgCode": "1951582",
       "merInnerNo": "4602022021832094453",
       "merCupNo": "82210005812001PA",
       "receiverNo": "SR2022021810000",
@@ -44,7 +44,7 @@
     "respData": {
       "version": "1.0",
       "orderNo": "...",
-      "orgCode": "200009",
+      "orgCode": "1951582",
       "applyId": 548099616395186176
     }
   }

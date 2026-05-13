@@ -2,7 +2,7 @@
   "id": "merchant_register",
   "category": "开户进件类接口",
   "name": "新增进件",
-  "description": "拓客 SAAS 新增进件接口。整体报文 SM4 加密：HTTP 请求 body 是一段 base64 密文（不是 JSON），响应 body 也是 base64 密文；签名对密文做。req_data 字段非常多，下面字段说明只列了主要项，按实际文档增删。",
+  "description": "拓客 SAAS 新增进件接口. 整体报文 SM4 加密: HTTP 请求 body 是一段 base64 密文 (不是 JSON), 响应 body 也是 base64 密文; 签名对密文做.\n\n测试环境参数:\n  • org_code: 1951582\n  • user_no: 29153396\n\n进件成功只拿到内部 customer_no, 真正贯穿全系统的 82 开头 merchant_no 要通过\"获取商户信息\"(open_merchant_info) 接口查询.\nreq_data 字段非常多, 下面字段说明只列了主要项, 按实际文档增删.",
   "method": "POST",
   "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/merchant_encry",
   "url_prod": "https://s2.lakala.com/api/v3/tkbs/merchant_encry",
@@ -16,8 +16,8 @@
     { "path": "timestamp",                      "type": "string", "required": true,  "desc": "毫秒级时间戳字符串 (工具自动填)" },
     { "path": "req_id",                         "type": "string", "required": true,  "desc": "请求流水号 (工具自动填)" },
     { "path": "req_data",                       "type": "object", "required": true,  "desc": "进件业务数据 — 整个 body 会一起加密" },
-    { "path": "req_data.org_code",              "type": "string", "required": true,  "desc": "组织代码 (拉卡拉分配)" },
-    { "path": "req_data.user_no",               "type": "string", "required": true,  "desc": "代理商业务员编号" },
+    { "path": "req_data.org_code",              "type": "string", "required": true,  "desc": "组织代码 (拉卡拉分配). 拓客进件测试环境用 1951582" },
+    { "path": "req_data.user_no",               "type": "string", "required": true,  "desc": "代理商业务员编号. 拓客进件测试环境用 29153396" },
     { "path": "req_data.source",                "type": "string", "required": true,  "desc": "进件来源, 例: H5" },
     { "path": "req_data.mer_type",              "type": "string", "required": true,  "desc": "商户类型: TP_PERSONAL / TP_ENTERPRISE 等" },
     { "path": "req_data.mer_name",              "type": "string", "required": true,  "desc": "商户名称" },
@@ -74,7 +74,7 @@
     "timestamp": "{{timestamp_ms}}",
     "req_id": "{{req_id}}",
     "req_data": {
-      "org_code": "200028",
+      "org_code": "1951582",
       "lar_id_type": "01",
       "attchments": [
         { "id": "merchant/null/20231227172245221010CHECKSTAND_IMG.png", "type": "CHECKSTAND_IMG" },
@@ -83,7 +83,7 @@
       "license_no": "92450202MA5MWYQK23",
       "account_name": "徐丽",
       "city_code": "6140",
-      "user_no": "20000101",
+      "user_no": "29153396",
       "latitude": "114.034257",
       "biz_content": {
         "activity_id": "37",
