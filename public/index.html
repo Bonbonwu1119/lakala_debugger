@@ -432,13 +432,29 @@
 <!-- ======== 模式 3: 验证响应 ======== -->
 <div class="mode-panel" id="mode-verify">
   <div class="card">
-    <h2><span class="num">★</span>响应验签</h2>
-    <p class="hint">拉卡拉给您的响应签名验证。粘贴响应头和响应体, 工具用拉卡拉公钥证书验签。</p>
+    <h2><span class="num">★</span>响应 / 通知验签</h2>
+    <p class="hint" style="white-space:pre-wrap; line-height:1.6;">拉卡拉的报文都是用拉卡拉私钥签的, 接入方用公钥证书验签. 两种场景, 签名报文格式不同:
 
-    <label>响应头 (一行一对, 格式: Key: Value)</label>
+· 同步响应 (5 行): appid + serial + timestamp + nonce + body, 通过 Lklapi-* 5 个 header 传
+· 异步通知 (3 行): timestamp + nonce + body, 通过 Authorization 单 header 传 (无 appid/serial)
+
+⚠ 最后一行末尾也必须有换行符 \n — 90%+ 验签失败都因为这个.
+⚠ 验签前不要对 body 做任何格式化 / 序列化, 必须用原始字节.</p>
+
+    <div class="row" style="margin-bottom: 12px;">
+      <div>
+        <label>验签类型</label>
+        <select id="verifyType" onchange="updateVerifyMode()">
+          <option value="sync">同步响应 (5 行: appid + serial + ts + nonce + body)</option>
+          <option value="async">异步通知 (3 行: ts + nonce + body, 无 appid/serial)</option>
+        </select>
+      </div>
+    </div>
+
+    <label id="verifyHeadersLabel">响应头 (一行一对, 格式: Key: Value)</label>
     <textarea id="verifyHeaders" rows="6" placeholder="Lklapi-Appid: OP00000003&#10;Lklapi-Serial: 1752b7386f8&#10;Lklapi-Timestamp: 1621690669&#10;Lklapi-Nonce: 9rmDjEJRTcbn&#10;Lklapi-Signature: WW7DPS9YWkZ..."></textarea>
 
-    <label>响应体 (原始字节, 不要格式化)</label>
+    <label id="verifyBodyLabel">响应体 (原始字节, 不要格式化)</label>
     <textarea id="verifyBody" rows="6" placeholder='{"code":"BBS00000","msg":"成功",...}'></textarea>
 
     <label>拉卡拉公钥证书 (默认已内嵌测试环境证书,如使用其他证书可替换)</label>
@@ -4017,6 +4033,26 @@ function runDiagnose() {
 // ==================== 模式 3: 验签 ====================
 function resetVerifyCert() { $('verifyCert').value = LKL_PUB_CERT_TEST; }
 
+// 切换同步/异步时调整 placeholder + label 提示
+function updateVerifyMode() {
+  const t = $('verifyType').value;
+  const hLabel = $('verifyHeadersLabel');
+  const bLabel = $('verifyBodyLabel');
+  const hTa = $('verifyHeaders');
+  const bTa = $('verifyBody');
+  if (t === 'async') {
+    hLabel.textContent = '回调请求头 (拉卡拉 POST 到您 notify_url 时带的 Authorization, 一行)';
+    hTa.placeholder = 'Authorization: LKLAPI-SHA256withRSA timestamp="1643271327",nonce_str="rQCbASKattHx",signature="iPSycb..."';
+    bLabel.textContent = '回调请求体 (原始字节, 拉卡拉 POST 来的 body, 不要反序列化)';
+    bTa.placeholder = '{"payOrderNo":"...","merchantOrderNo":"...",...}';
+  } else {
+    hLabel.textContent = '响应头 (一行一对, 格式: Key: Value)';
+    hTa.placeholder = 'Lklapi-Appid: OP00000003\nLklapi-Serial: 1752b7386f8\nLklapi-Timestamp: 1621690669\nLklapi-Nonce: 9rmDjEJRTcbn\nLklapi-Signature: WW7DPS9YWkZ...';
+    bLabel.textContent = '响应体 (原始字节, 不要格式化)';
+    bTa.placeholder = '{"code":"BBS00000","msg":"成功",...}';
+  }
+}
+
 function runVerify() {
   const out = $('verifyResult');
   out.innerHTML = '';
@@ -4024,43 +4060,75 @@ function runVerify() {
     const headersText = $('verifyHeaders').value.trim();
     const body = $('verifyBody').value;
     const cert = $('verifyCert').value.trim();
+    const verifyType = ($('verifyType') && $('verifyType').value) || 'sync';
     if (!headersText || !body || !cert) throw new Error('所有字段都要填');
 
-    // 解析 headers
+    // 解析 headers (Key: Value 形式, 大小写不敏感)
     const h = {};
     headersText.split('\n').forEach(line => {
       const i = line.indexOf(':');
       if (i > 0) h[line.slice(0,i).trim().toLowerCase()] = line.slice(i+1).trim().replace(/^"|"$/g,'');
     });
 
-    const appid = h['lklapi-appid'] || '';
-    const serial = h['lklapi-serial'] || '';
-    const ts = h['lklapi-timestamp'] || '';
-    const nonce = h['lklapi-nonce'] || '';
-    const sig = h['lklapi-signature'] || '';
+    let payload, ts, nonce, sig, appid, serial, lineCount;
 
-    const missing = [];
-    if (!serial) missing.push('Lklapi-Serial');
-    if (!ts) missing.push('Lklapi-Timestamp');
-    if (!nonce) missing.push('Lklapi-Nonce');
-    if (!sig) missing.push('Lklapi-Signature');
-    if (missing.length) throw new Error('缺少响应头: ' + missing.join(', '));
+    if (verifyType === 'async') {
+      // 异步通知: Authorization header 里同时带 timestamp / nonce_str / signature
+      const auth = h['authorization'] || '';
+      if (!auth) throw new Error('缺少 Authorization 头. 异步通知时 Authorization 形如: LKLAPI-SHA256withRSA timestamp="...",nonce_str="...",signature="..."');
+      const tsM    = auth.match(/timestamp\s*=\s*"?([^",]+)"?/);
+      const nonceM = auth.match(/nonce_str\s*=\s*"?([^",]+)"?/);
+      const sigM   = auth.match(/signature\s*=\s*"?([^"]+)"?/);
+      ts    = tsM    ? tsM[1].trim()    : '';
+      nonce = nonceM ? nonceM[1].trim() : '';
+      sig   = sigM   ? sigM[1].trim()   : '';
+      const miss = [];
+      if (!ts) miss.push('timestamp');
+      if (!nonce) miss.push('nonce_str');
+      if (!sig) miss.push('signature');
+      if (miss.length) throw new Error('Authorization 里缺少: ' + miss.join(', '));
 
-    const payload = `${appid}\n${serial}\n${ts}\n${nonce}\n${body}\n`;
+      // 3 行报文: ts + nonce + body, 末尾 \n
+      payload = `${ts}\n${nonce}\n${body}\n`;
+      lineCount = 3;
+    } else {
+      // 同步响应: 5 行报文
+      appid  = h['lklapi-appid']  || '';
+      serial = h['lklapi-serial'] || '';
+      ts     = h['lklapi-timestamp'] || '';
+      nonce  = h['lklapi-nonce']  || '';
+      sig    = h['lklapi-signature'] || '';
+      const miss = [];
+      if (!serial) miss.push('Lklapi-Serial');
+      if (!ts)     miss.push('Lklapi-Timestamp');
+      if (!nonce)  miss.push('Lklapi-Nonce');
+      if (!sig)    miss.push('Lklapi-Signature');
+      if (miss.length) throw new Error('缺少响应头: ' + miss.join(', '));
+
+      payload = `${appid}\n${serial}\n${ts}\n${nonce}\n${body}\n`;
+      lineCount = 5;
+    }
+
     const ok = verifyRSA(cert, payload, sig);
     const visiblePayload = payload.replace(/\n/g,'<span class="lf-marker">↵\n</span>');
+    const traceId = h['lklapi-traceid'] || '';
 
     out.innerHTML = `
       <div class="diag-result ${ok?'match':'mismatch'}">
         <div style="font-size:18px; font-weight:600; margin-bottom:12px;">
-          ${ok ? '✅ 验签通过 — 响应来自拉卡拉，未被篡改' : '❌ 验签失败 — 签名不匹配'}
+          ${ok
+            ? (verifyType === 'async' ? '✅ 异步通知验签通过 — 通知来自拉卡拉, 未被篡改' : '✅ 同步响应验签通过 — 响应来自拉卡拉, 未被篡改')
+            : '❌ 验签失败 — 签名不匹配'}
         </div>
-        <div class="kv"><div class="kv-label">参与验签的字节 (5 行)</div><div class="kv-value mono-block">${visiblePayload}</div></div>
-        <div class="kv"><div class="kv-label">签名值</div><div class="kv-value">${escapeHtml(sig)}</div></div>
+        ${traceId ? `<div class="kv"><div class="kv-label">Lklapi-Traceid (打到日志便于研发查问题)</div><div class="kv-value">${escapeHtml(traceId)}</div></div>` : ''}
+        <div class="kv"><div class="kv-label">参与验签的字节 (${lineCount} 行${verifyType==='async'?', 异步通知格式':', 同步响应格式'})</div><div class="kv-value mono-block">${visiblePayload}</div></div>
+        <div class="kv"><div class="kv-label">签名值 (Base64)</div><div class="kv-value">${escapeHtml(sig)}</div></div>
         ${ok ? '' : `<div class="alert alert-warn" style="margin-top:12px;">如果验签失败, 检查:<ul style="margin:6px 0 0 16px;">
-          <li>响应体是否是<strong>原始字节</strong>(没有被格式化或修改)?</li>
-          <li>使用的证书是否跟当前环境匹配 (测试 vs 生产)?</li>
-          <li>响应头里的 timestamp / nonce / serial 是否跟实际响应一致, 没漏字符?</li>
+          <li>报文 body 是否是<strong>原始字节</strong>? 不能反序列化 / 美化 / 改空格</li>
+          <li>选对了"验签类型"? 同步用 5 行, 异步用 3 行</li>
+          <li>证书是否跟当前环境匹配 (测试 vs 生产)?</li>
+          <li>header 里的 timestamp / nonce / serial / signature 跟拉卡拉发来的一致, 没漏字符?</li>
+          <li>最后一行 body 后面是否有换行符? 这是 90%+ 失败的原因</li>
         </ul></div>`}
       </div>
     `;
