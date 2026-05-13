@@ -29,19 +29,40 @@
   .wrap { max-width: 1280px; margin: 0 auto; padding: 36px 24px 80px; }
 
   header {
-    border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 24px;
-    display: flex; align-items: baseline; justify-content: space-between;
-    flex-wrap: wrap; gap: 12px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 16px;
   }
   h1 { font-family: "Noto Serif SC", serif; font-weight: 700; font-size: 28px; margin: 0; }
-  .header-meta { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-soft); }
-  .env-pill {
-    font-family: "JetBrains Mono", monospace; font-size: 11px;
-    padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line-strong);
-    background: var(--card); cursor: pointer; margin-left: 8px;
+  .header-meta { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* 顶部工具栏: 环境 + 公钥证书入口, 大且明显 */
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch;
+    margin: 0 0 20px;
   }
-  .env-pill.test { color: var(--accent); border-color: var(--accent); }
+  .toolbar-item {
+    flex: 1; min-width: 260px;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .toolbar-item-icon { font-size: 22px; line-height: 1; }
+  .toolbar-item-body { flex: 1; }
+  .toolbar-item-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .8px; font-family: "JetBrains Mono", monospace; }
+  .toolbar-item-main { font-family: "Noto Serif SC", serif; font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .toolbar-item-sub { font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
+  .toolbar-item.env-active .toolbar-item-main { color: var(--accent); }
+  .toolbar-item.env-active.is-prod .toolbar-item-main { color: var(--err); }
+  .env-pill {
+    font-family: "Noto Serif SC", serif; font-size: 14px; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px; border: 2px solid var(--accent);
+    background: var(--card); cursor: pointer; color: var(--accent);
+  }
   .env-pill.prod { color: var(--err); border-color: var(--err); background: #fef2f2; }
+  .toolbar-cert-btn {
+    font-family: "Noto Serif SC", serif; font-size: 14px; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px; border: 2px solid var(--accent);
+    background: var(--accent); color: var(--bg); cursor: pointer;
+  }
+  .toolbar-cert-btn:hover { background: var(--accent-dark, var(--accent)); opacity: .9; }
 
   /* 模式切换 */
   .mode-bar { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
@@ -289,20 +310,38 @@
 <div class="wrap">
 
 <header>
-  <div>
-    <h1>拉卡拉调试工具</h1>
-    <div class="header-meta">SHA256withRSA · 加签 / 验签 · SM4 加解密</div>
-  </div>
-  <div style="display: flex; align-items: center; gap: 12px;">
-    <button class="btn btn-accent" onclick="showCertDialog()" title="查看 / 复制 / 下载 拉卡拉测试公钥证书 lkl-apigw-v2.cer">📜 公钥证书</button>
-    <span>环境:
-      <select id="envSelect" class="env-pill" onchange="onEnvChange()">
-        <option value="test">测试环境</option>
-        <option value="prod">生产环境</option>
-      </select>
-    </span>
-  </div>
+  <h1>拉卡拉调试工具</h1>
+  <div class="header-meta">SHA256withRSA · 加签 / 验签 · SM4 加解密 · 接口示例 + 一键发送</div>
 </header>
+
+<!-- 顶部工具栏: 环境切换 + 验签公钥证书入口 -->
+<div class="toolbar">
+  <div class="toolbar-item env-active" id="envBox">
+    <div class="toolbar-item-icon">🌐</div>
+    <div class="toolbar-item-body">
+      <div class="toolbar-item-label">当前环境</div>
+      <div class="toolbar-item-main">
+        <select id="envSelect" class="env-pill" onchange="onEnvChange()">
+          <option value="test">测试环境</option>
+          <option value="prod">生产环境</option>
+        </select>
+      </div>
+      <div class="toolbar-item-sub">所有"发送请求"和接口 URL 跟随此环境切换</div>
+    </div>
+  </div>
+  <div class="toolbar-item">
+    <div class="toolbar-item-icon">📜</div>
+    <div class="toolbar-item-body">
+      <div class="toolbar-item-label">验签公钥证书 (测试环境)</div>
+      <div class="toolbar-item-main">
+        <button class="toolbar-cert-btn" onclick="showCertDialog()">查看 / 复制 / 下载</button>
+      </div>
+      <div class="toolbar-item-sub">拉卡拉签发, 用于验证拉卡拉响应 / 异步通知的签名 (lkl-apigw-v2.cer)</div>
+    </div>
+  </div>
+</div>
+
+<!-- 公钥证书弹窗 -->
 
 <!-- 公钥证书弹窗 -->
 <div id="certDialog" class="cert-dialog" style="display:none;" onclick="if(event.target===this) hideCertDialog()">
@@ -3555,6 +3594,16 @@ function currentUrl() {
 function onEnvChange() {
   ENV = $('envSelect').value;
   if (CURRENT_SCHEMA) $('ifaceUrl').textContent = currentUrl();
+  // 顶部环境框 + select 在生产环境时变红色, 警示作用
+  const envBox = $('envBox');
+  const sel = $('envSelect');
+  if (ENV === 'prod') {
+    envBox && envBox.classList.add('is-prod');
+    sel && sel.classList.add('prod');
+  } else {
+    envBox && envBox.classList.remove('is-prod');
+    sel && sel.classList.remove('prod');
+  }
 }
 
 function loadExampleBody() {
