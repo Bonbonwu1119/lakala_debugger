@@ -1582,11 +1582,6 @@ const INLINE_SCHEMAS = {
         "desc": "组织代码 (机构方代发场景, 例: OP00000003)"
       },
       {
-        "path": "notify_url",
-        "required": false,
-        "desc": "顶层通知地址 (部分接入方在此填; 也可填 req_data.notify_url)"
-      },
-      {
         "path": "req_data.merchant_no",
         "required": true,
         "desc": "商户号 (拉卡拉分配). 测试环境用 82229007392000A"
@@ -1594,7 +1589,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.term_no",
         "required": true,
-        "desc": "终端号 (拉卡拉分配的业务终端). 被扫测试可用 D9296400"
+        "desc": "终端号 (拉卡拉分配的业务终端). 测试环境用 D9296400"
       },
       {
         "path": "req_data.out_trade_no",
@@ -1634,7 +1629,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.notify_url",
         "required": false,
-        "desc": "异步通知地址"
+        "desc": "异步通知地址 (拉卡拉支付完成后会 POST 到这里)"
       },
       {
         "path": "req_data.busi_mode",
@@ -1696,7 +1691,6 @@ const INLINE_SCHEMAS = {
       "req_time": "{{req_time}}",
       "version": "3.0",
       "out_org_code": "OP00000003",
-      "notify_url": "https://example.com/notify",
       "req_data": {
         "merchant_no": "82229007392000A",
         "term_no": "D9296400",
@@ -1705,7 +1699,6 @@ const INLINE_SCHEMAS = {
         "total_amount": "1",
         "notify_url": "https://example.com/notify",
         "location_info": {
-          "notify_url": "https://example.com/notify",
           "request_ip": "10.176.1.192",
           "location": "+37.123456789,-121.123456789"
         }

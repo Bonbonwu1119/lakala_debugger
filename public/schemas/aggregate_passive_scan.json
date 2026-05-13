@@ -11,9 +11,8 @@
     { "path": "version",                              "required": true,  "desc": "接口版本号 3.0" },
     { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
     { "path": "out_org_code",                         "required": false, "desc": "组织代码 (机构方代发场景, 例: OP00000003)" },
-    { "path": "notify_url",                           "required": false, "desc": "顶层通知地址 (部分接入方在此填; 也可填 req_data.notify_url)" },
     { "path": "req_data.merchant_no",                 "required": true,  "desc": "商户号 (拉卡拉分配). 测试环境用 82229007392000A" },
-    { "path": "req_data.term_no",                     "required": true,  "desc": "终端号 (拉卡拉分配的业务终端). 被扫测试可用 D9296400" },
+    { "path": "req_data.term_no",                     "required": true,  "desc": "终端号 (拉卡拉分配的业务终端). 测试环境用 D9296400" },
     { "path": "req_data.out_trade_no",                "required": true,  "desc": "商户交易流水号, 商户系统唯一不可重复" },
     { "path": "req_data.auth_code",                   "required": true,  "desc": "支付授权码 (设备读取用户 App 里的付款码字符串). 前缀决定钱包类型: 10-15=微信 / 25-30=支付宝 / 62=银联 / 01=数币 / 51=翼支付 / 83=苏宁" },
     { "path": "req_data.total_amount",                "required": true,  "desc": "金额, 单位: 分 (字符串). 测试环境必须填 \"1\" (= 1 分)" },
@@ -21,7 +20,7 @@
     { "path": "req_data.location_info.request_ip",    "required": true,  "desc": "请求方 IP" },
     { "path": "req_data.location_info.location",      "required": false, "desc": "纬度,经度 (注: 被扫接口用逗号分隔, 跟主扫的 +纬度/+经度 格式不同)" },
     { "path": "req_data.location_info.base_station",  "required": false, "desc": "基站信息" },
-    { "path": "req_data.notify_url",                  "required": false, "desc": "异步通知地址" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "异步通知地址 (拉卡拉支付完成后会 POST 到这里)" },
     { "path": "req_data.busi_mode",                   "required": false, "desc": "业务模式: ACQ-收单 (默认)" },
     { "path": "req_data.subject",                     "required": false, "desc": "订单标题 (最多 42 字符)" },
     { "path": "req_data.pay_order_no",                "required": false, "desc": "拉卡拉支付业务订单号" },
@@ -38,7 +37,6 @@
     "req_time": "{{req_time}}",
     "version": "3.0",
     "out_org_code": "OP00000003",
-    "notify_url": "https://example.com/notify",
     "req_data": {
       "merchant_no": "82229007392000A",
       "term_no": "D9296400",
@@ -47,7 +45,6 @@
       "total_amount": "1",
       "notify_url": "https://example.com/notify",
       "location_info": {
-        "notify_url": "https://example.com/notify",
         "request_ip": "10.176.1.192",
         "location": "+37.123456789,-121.123456789"
       }
