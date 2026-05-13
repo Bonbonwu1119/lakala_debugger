@@ -1,7 +1,7 @@
 {
   "id": "open_merchant_info",
   "category": "开户进件类接口",
-  "name": "商户信息查询",
+  "name": "获取商户信息",
   "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一即可。",
   "method": "POST",
   "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",

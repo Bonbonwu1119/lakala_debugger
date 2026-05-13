@@ -870,7 +870,7 @@ const INLINE_SCHEMAS = {
   "merchant_register": {
     "id": "merchant_register",
     "category": "开户进件类接口",
-    "name": "新增进件",
+    "name": "新增商户进件",
     "description": "拓客 SAAS 新增进件接口. 整体报文 SM4 加密: HTTP 请求 body 是一段 base64 密文 (不是 JSON), 响应 body 也是 base64 密文; 签名对密文做.\n\n测试环境参数:\n  • org_code: 1951582\n  • user_no: 29153396\n\n进件成功只拿到内部 customer_no, 真正贯穿全系统的 82 开头 merchant_no 要通过\"获取商户信息\"(open_merchant_info) 接口查询.\nreq_data 字段非常多, 下面字段说明只列了主要项, 按实际文档增删.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/merchant_encry",
@@ -1293,7 +1293,7 @@ const INLINE_SCHEMAS = {
   "file_upload": {
     "id": "file_upload",
     "category": "开户进件类接口",
-    "name": "文件上传",
+    "name": "商户进件文件上传",
     "description": "进件附件上传接口。请求/响应都是明文 JSON, 不加密。file_base64 用 data:image/...;base64,... 的 Data URL 格式。返回的 url 拿到后用作 attchments[].id 提交进件。",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/customer/file/upload",
@@ -1367,7 +1367,7 @@ const INLINE_SCHEMAS = {
   "open_merchant_info": {
     "id": "open_merchant_info",
     "category": "开户进件类接口",
-    "name": "商户信息查询",
+    "name": "获取商户信息",
     "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一即可。",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",

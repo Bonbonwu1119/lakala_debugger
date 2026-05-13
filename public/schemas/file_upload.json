@@ -1,7 +1,7 @@
 {
   "id": "file_upload",
   "category": "开户进件类接口",
-  "name": "文件上传",
+  "name": "商户进件文件上传",
   "description": "进件附件上传接口。请求/响应都是明文 JSON, 不加密。file_base64 用 data:image/...;base64,... 的 Data URL 格式。返回的 url 拿到后用作 attchments[].id 提交进件。",
   "method": "POST",
   "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/customer/file/upload",
