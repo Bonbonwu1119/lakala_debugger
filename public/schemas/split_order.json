@@ -1,0 +1,57 @@
+{
+  "id": "split_order",
+  "category": "分账提现类接口",
+  "name": "订单分账 (V3)",
+  "description": "针对某笔已成功的交易订单做分账. 通过 log_no + log_date 定位原交易. 异步处理, 响应 PROCESSING 表示已受理.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/sacs/separate",
+  "url_prod": "https://s2.lakala.com/api/v3/sacs/separate",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                              "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.merchant_no",                 "required": true,  "desc": "商户号" },
+    { "path": "req_data.log_no",                      "required": true,  "desc": "拉卡拉对账单流水号 (POSP 流水号)" },
+    { "path": "req_data.log_date",                    "required": true,  "desc": "交易日期 yyyyMMdd (POSP 日期)" },
+    { "path": "req_data.out_separate_no",             "required": true,  "desc": "商户分账指令流水号, 商户唯一" },
+    { "path": "req_data.total_amt",                   "required": true,  "desc": "分账总金额, 单位: 分" },
+    { "path": "req_data.lkl_org_no",                  "required": false, "desc": "拉卡拉机构编号" },
+    { "path": "req_data.cal_type",                    "required": false, "desc": "分账计算类型: 0=按指定金额(默认) / 1=按指定比例" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "异步回调地址" },
+    { "path": "req_data.recv_datas",                  "required": true,  "desc": "分账接收数据列表" },
+    { "path": "req_data.recv_datas[].recv_merchant_no", "required": false, "desc": "接收方商户号 (分给自己用)" },
+    { "path": "req_data.recv_datas[].recv_no",        "required": false, "desc": "分账接收方编号 (分给他人)" },
+    { "path": "req_data.recv_datas[].separate_value", "required": true,  "desc": "分账数值: cal_type=0 金额(分) / cal_type=1 比例小数" }
+  ],
+  "example": {
+    "version": "3.0",
+    "req_time": "{{req_time}}",
+    "req_data": {
+      "merchant_no": "82229005943000D",
+      "log_date": "20221226",
+      "log_no": "00210306006106",
+      "out_separate_no": "{{out_trade_no}}",
+      "total_amt": "9900",
+      "lkl_org_no": "1058036",
+      "cal_type": "0",
+      "notify_url": "http://example.com/split-notify",
+      "recv_datas": [
+        { "recv_merchant_no": "82229005943000D", "separate_value": "4950" },
+        { "recv_no": "SR2022121029001", "separate_value": "3960" }
+      ]
+    }
+  },
+  "response_example": {
+    "code": "SACS0000",
+    "msg": "成功",
+    "resp_time": "20221226165618",
+    "resp_data": {
+      "total_amt": "9900",
+      "log_date": "20221226",
+      "separate_no": "20221229770100000235090500",
+      "log_no": "00210306006106",
+      "out_separate_no": "...",
+      "status": "PROCESSING"
+    }
+  }
+}

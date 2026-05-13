@@ -1,0 +1,51 @@
+{
+  "id": "split_bind",
+  "category": "分账提现类接口",
+  "name": "分账关系绑定申请 (V2)",
+  "description": "建立分账接收方和分账商户之间的分账关系. V2 协议: 顶层 reqId/version/reqTime/reqData, reqData 内还有业务 version. 异步审核, 审核结果走 retUrl 回调.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyBind",
+  "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyBind",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "reqId",                          "required": true,  "desc": "请求流水号" },
+    { "path": "version",                        "required": true,  "desc": "协议版本号 2.0" },
+    { "path": "reqTime",                        "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "reqData.version",                "required": true,  "desc": "业务接口版本号 1.0" },
+    { "path": "reqData.orderNo",                "required": true,  "desc": "订单编号 (14 位以上, 便于追踪)" },
+    { "path": "reqData.orgCode",                "required": true,  "desc": "分账接收方所属机构代码" },
+    { "path": "reqData.merInnerNo",             "required": true,  "desc": "分账商户内部商户号" },
+    { "path": "reqData.merCupNo",               "required": true,  "desc": "分账商户银联商户号" },
+    { "path": "reqData.receiverNo",             "required": true,  "desc": "分账接收方编号 (SR 开头)" },
+    { "path": "reqData.entrustFileName",        "required": true,  "desc": "合作协议附件名称" },
+    { "path": "reqData.entrustFilePath",        "required": true,  "desc": "合作协议附件路径 (走附件上传接口拿)" },
+    { "path": "reqData.retUrl",                 "required": true,  "desc": "审核结果异步通知地址" },
+    { "path": "reqData.attachments",            "required": false, "desc": "附加资料 (attachList: attachType/attachName/attachStorePath)" }
+  ],
+  "example": {
+    "reqId": "{{req_id}}",
+    "version": "2.0",
+    "reqTime": "{{req_time}}",
+    "reqData": {
+      "version": "1.0",
+      "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
+      "orgCode": "200009",
+      "merInnerNo": "4602022021832094453",
+      "merCupNo": "82210005812001PA",
+      "receiverNo": "SR2022021810000",
+      "entrustFileName": "合作协议.pdf",
+      "entrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
+      "retUrl": "https://example.com/ledger/notify"
+    }
+  },
+  "response_example": {
+    "retCode": "000000",
+    "retMsg": "申请已受理",
+    "respData": {
+      "version": "1.0",
+      "orderNo": "...",
+      "orgCode": "200009",
+      "applyId": 548099616395186176
+    }
+  }
+}

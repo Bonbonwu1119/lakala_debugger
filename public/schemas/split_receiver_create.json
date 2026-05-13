@@ -1,0 +1,68 @@
+{
+  "id": "split_receiver_create",
+  "category": "分账提现类接口",
+  "name": "分账接收方创建申请 (V2)",
+  "description": "创建分账接收方. 此接口会认证结算信息和营业执照, 上送数据务必准确. 审核通过后返回 receiverNo (SR 开头) 用于后续分账绑定和分账指令.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerReceiver",
+  "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerReceiver",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "reqId",                              "required": true,  "desc": "请求流水号" },
+    { "path": "version",                            "required": true,  "desc": "协议版本号 2.0" },
+    { "path": "reqTime",                            "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "reqData.version",                    "required": true,  "desc": "业务接口版本号 1.0" },
+    { "path": "reqData.orderNo",                    "required": true,  "desc": "订单编号" },
+    { "path": "reqData.orgCode",                    "required": true,  "desc": "机构代码" },
+    { "path": "reqData.receiverName",               "required": true,  "desc": "分账接收方名称" },
+    { "path": "reqData.contactMobile",              "required": true,  "desc": "联系手机号" },
+    { "path": "reqData.licenseNo",                  "required": false, "desc": "营业执照号码" },
+    { "path": "reqData.licenseName",                "required": false, "desc": "营业执照名称" },
+    { "path": "reqData.legalPersonName",            "required": false, "desc": "法人姓名" },
+    { "path": "reqData.legalPersonCertificateType", "required": false, "desc": "法人证件类型: 17=身份证 / 18=护照 / 19=港澳通行证 / 20=台湾通行证 / 22=港澳居住证 / 23=台湾居住证 / 10=外国人永居证" },
+    { "path": "reqData.legalPersonCertificateNo",   "required": false, "desc": "法人证件号" },
+    { "path": "reqData.acctNo",                     "required": true,  "desc": "收款账户卡号" },
+    { "path": "reqData.acctName",                   "required": true,  "desc": "收款账户名称" },
+    { "path": "reqData.acctTypeCode",               "required": true,  "desc": "收款账户类型代码" },
+    { "path": "reqData.acctCertificateType",        "required": true,  "desc": "收款账户证件类型 (同 legalPersonCertificateType)" },
+    { "path": "reqData.acctCertificateNo",          "required": true,  "desc": "收款账户证件号" },
+    { "path": "reqData.acctOpenBankCode",           "required": true,  "desc": "收款账户开户行号" },
+    { "path": "reqData.acctOpenBankName",           "required": true,  "desc": "收款账户开户名称" },
+    { "path": "reqData.acctClearBankCode",          "required": true,  "desc": "收款账户清算行行号" },
+    { "path": "reqData.attachList",                 "required": false, "desc": "接收方附件资料 (attachType=身份证正面 / BANK_CARD 等, attachName, attachStorePath)" },
+    { "path": "reqData.settleType",                 "required": false, "desc": "提款类型" },
+    { "path": "reqData.receiverRole",               "required": false, "desc": "接收方角色" }
+  ],
+  "example": {
+    "reqId": "{{req_id}}",
+    "version": "2.0",
+    "reqTime": "{{req_time}}",
+    "reqData": {
+      "version": "1.0",
+      "orderNo": "{{out_trade_no}}",
+      "orgCode": "1058036",
+      "receiverName": "分账接收方测试00",
+      "contactMobile": "13728421998",
+      "acctNo": "6222020206116171117",
+      "acctName": "张三",
+      "acctTypeCode": "58",
+      "acctCertificateType": "17",
+      "acctCertificateNo": "340102199003078774",
+      "acctOpenBankCode": "983006000",
+      "acctOpenBankName": "民生银行",
+      "acctClearBankCode": "983006000"
+    }
+  },
+  "response_example": {
+    "retCode": "000000",
+    "retMsg": "分账接收方创建成功",
+    "respData": {
+      "version": "1.0",
+      "orderNo": "...",
+      "orgCode": "1058036",
+      "orgId": "1058036",
+      "orgName": "红星集团",
+      "receiverNo": "SR202302231803"
+    }
+  }
+}

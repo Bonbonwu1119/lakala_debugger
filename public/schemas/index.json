@@ -17,7 +17,11 @@
     },
     {
       "name": "分账提现类接口",
-      "groups": []
+      "groups": [
+        { "name": "分账执行",   "interfaces": ["split_balance", "split_order"] },
+        { "name": "提现",       "interfaces": ["d1_withdraw"] },
+        { "name": "分账开通",   "interfaces": ["split_bind", "split_receiver_create", "split_merchant_open"] }
+      ]
     },
     {
       "name": "附加功能类接口",

@@ -1,0 +1,45 @@
+{
+  "id": "d1_withdraw",
+  "category": "分账提现类接口",
+  "name": "账户 D1 提现 (V2 账管家)",
+  "description": "行业钱包 D1 提现, 把分账接收方账户的余额提到结算银行卡. V2 协议: 顶层 timestamp/ver/reqId/reqData, 业务字段 camelCase. payNo 和 payType 二选一, 都不传默认提到 01 收款账户.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v2/laep/industry/ewalletWithdrawD1",
+  "url_prod": "https://s2.lakala.com/api/v2/laep/industry/ewalletWithdrawD1",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "ver",                          "required": true,  "desc": "协议版本号 1.0.0" },
+    { "path": "timestamp",                    "required": true,  "desc": "毫秒级时间戳 (字符串)" },
+    { "path": "reqId",                        "required": true,  "desc": "请求流水号 (UUID)" },
+    { "path": "reqData.orgNo",                "required": true,  "desc": "bmcp 机构号" },
+    { "path": "reqData.merchantNo",           "required": true,  "desc": "商户号 (822 开头) 或 receiverNo (SR 开头分账接收方编号)" },
+    { "path": "reqData.drawAmt",              "required": true,  "desc": "提现金额, 单位: 元 (字符串)" },
+    { "path": "reqData.notifyUrl",            "required": false, "desc": "异步通知地址" },
+    { "path": "reqData.merOrderNo",           "required": false, "desc": "商户订单号 (商户系统唯一)" },
+    { "path": "reqData.payNo",                "required": false, "desc": "账号 (传了 payNo 则 payType 无效)" },
+    { "path": "reqData.payType",              "required": false, "desc": "账号类型: 01=收款账户 04=分账接收方账户; 14=天财收款 15=天财接收方 19=钱账通收款 20=钱账通接收方 ... (默认 01)" },
+    { "path": "reqData.remark",               "required": false, "desc": "备注" },
+    { "path": "reqData.summary",              "required": false, "desc": "摘要" },
+    { "path": "reqData.bankId",               "required": false, "desc": "结算银行 ID" }
+  ],
+  "example": {
+    "timestamp": "{{timestamp_ms}}",
+    "ver": "1.0.0",
+    "reqId": "{{req_id}}",
+    "reqData": {
+      "orgNo": "1",
+      "merchantNo": "82210000581200BS",
+      "drawAmt": "10",
+      "notifyUrl": "http://example.com/withdraw-notify",
+      "merOrderNo": "{{out_trade_no}}"
+    }
+  },
+  "response_example": {
+    "retCode": "000000",
+    "retMsg": "成功",
+    "respData": {
+      "drawJnl": "2208161415334262002464",
+      "merOrderNo": "..."
+    }
+  }
+}

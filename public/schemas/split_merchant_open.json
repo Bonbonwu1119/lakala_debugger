@@ -1,0 +1,72 @@
+{
+  "id": "split_merchant_open",
+  "category": "分账提现类接口",
+  "name": "商户分账业务开通申请 (V2)",
+  "description": "商户开通分账业务. 后台人工审核, 可通过查询接口或 retUrl 异步通知获取结果. 必传分账结算授权委托书 (附件需先走文件上传).",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerMer",
+  "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerMer",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "reqId",                          "required": true,  "desc": "请求流水号" },
+    { "path": "version",                        "required": true,  "desc": "协议版本号 2.0" },
+    { "path": "reqTime",                        "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "reqData.version",                "required": true,  "desc": "业务接口版本号 1.0" },
+    { "path": "reqData.orderNo",                "required": true,  "desc": "订单编号 (用于回调匹配)" },
+    { "path": "reqData.orgCode",                "required": true,  "desc": "机构代码" },
+    { "path": "reqData.merInnerNo",             "required": false, "desc": "拉卡拉内部商户号 (与 merCupNo 至少一个)" },
+    { "path": "reqData.merCupNo",               "required": false, "desc": "银联商户号 (与 merInnerNo 至少一个)" },
+    { "path": "reqData.contactMobile",          "required": true,  "desc": "联系手机号" },
+    { "path": "reqData.splitLowestRatio",       "required": true,  "desc": "最低分账比例 (百分比, 支持 2 位精度)" },
+    { "path": "reqData.splitEntrustFileName",   "required": true,  "desc": "分账结算委托书文件名" },
+    { "path": "reqData.splitEntrustFilePath",   "required": true,  "desc": "分账结算委托书文件路径 (附件上传接口拿)" },
+    { "path": "reqData.retUrl",                 "required": true,  "desc": "审核结果回调地址" },
+    { "path": "reqData.splitRange",             "required": false, "desc": "分账范围" },
+    { "path": "reqData.sepFundSource",          "required": false, "desc": "分账依据" },
+    { "path": "reqData.eleContractNo",          "required": false, "desc": "电子合同编号" },
+    { "path": "reqData.splitLaunchMode",        "required": false, "desc": "分账发起方式: AUTO 等" },
+    { "path": "reqData.settleType",             "required": false, "desc": "提款类型" },
+    { "path": "reqData.splitRuleSource",        "required": false, "desc": "分账规则来源: MER 等" },
+    { "path": "reqData.openWay",                "required": false, "desc": "业务开通方式: GENERAL 等" },
+    { "path": "reqData.attachments",            "required": false, "desc": "附加资料列表" },
+    { "path": "reqData.returnAcctModel",        "required": false, "desc": "退货承担账户模式" },
+    { "path": "reqData.feeRule",                "required": false, "desc": "分账计费规则 (arrivalMode/feeRange/feeMode/amount/ratio/feeUpper/feeLower)" }
+  ],
+  "example": {
+    "reqId": "{{req_id}}",
+    "version": "2.0",
+    "reqTime": "{{req_time}}",
+    "reqData": {
+      "version": "1.0",
+      "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
+      "orgCode": "200009",
+      "merInnerNo": "4602025122436325573",
+      "contactMobile": "13800000000",
+      "splitLowestRatio": 94,
+      "splitRange": "ALL",
+      "sepFundSource": "TR",
+      "splitLaunchMode": "AUTO",
+      "splitRuleSource": "MER",
+      "openWay": "GENERAL",
+      "splitEntrustFileName": "授权委托书.pdf",
+      "splitEntrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
+      "retUrl": "https://example.com/ledger/notify",
+      "feeRule": {
+        "arrivalMode": "ALL",
+        "feeRange": "RECEIVER",
+        "feeMode": "RATIO",
+        "ratio": 0.1
+      }
+    }
+  },
+  "response_example": {
+    "retCode": "000000",
+    "retMsg": "申请已受理, 请等待审核结果",
+    "respData": {
+      "version": "1.0",
+      "orderNo": "KFPT...",
+      "orgCode": "1",
+      "applyId": 681001215598657536
+    }
+  }
+}

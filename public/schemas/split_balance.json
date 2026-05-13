@@ -1,0 +1,51 @@
+{
+  "id": "split_balance",
+  "category": "分账提现类接口",
+  "name": "余额分账 (V3)",
+  "description": "对商户余额发起分账, 异步处理. 响应 status=PROCESSING 表示已受理, 需主动查询或等待回调. 建议查询间隔 15 秒以上. 余额分账要满足商户最低分账比例: 比如商户最低分账比例 30%, 单次分 100 元, 必须至少分 30 元给商户自身.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/sacs/balanceSeparate",
+  "url_prod": "https://s2.lakala.com/api/v3/sacs/balanceSeparate",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                              "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.merchant_no",                 "required": false, "desc": "分账方商户号 (与 org_code 互斥)" },
+    { "path": "req_data.org_code",                    "required": false, "desc": "分账方机构号 (与 merchant_no 互斥)" },
+    { "path": "req_data.out_separate_no",             "required": true,  "desc": "商户分账指令流水号, 每商户号下唯一" },
+    { "path": "req_data.total_amt",                   "required": true,  "desc": "分账总金额, 单位: 分" },
+    { "path": "req_data.lkl_org_no",                  "required": false, "desc": "拉卡拉机构编号" },
+    { "path": "req_data.cal_type",                    "required": false, "desc": "分账计算类型: 0=指定金额(默认) / 1=指定比例" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "异步回调地址" },
+    { "path": "req_data.recv_datas",                  "required": true,  "desc": "分账接收数据列表" },
+    { "path": "req_data.recv_datas[].recv_merchant_no", "required": false, "desc": "接收方商户号 (分给自己用, 与 merchant_no 一致); 与 recv_no 互斥" },
+    { "path": "req_data.recv_datas[].recv_no",        "required": false, "desc": "分账接收方编号 (分给他人用); 与 recv_merchant_no 互斥" },
+    { "path": "req_data.recv_datas[].separate_value", "required": true,  "desc": "分账数值: cal_type=0 时是金额(分), cal_type=1 时是比例小数(0.55=55%)" },
+    { "path": "req_data.recv_datas[].remark",         "required": false, "desc": "备注" }
+  ],
+  "example": {
+    "version": "3.0",
+    "req_time": "{{req_time}}",
+    "req_data": {
+      "merchant_no": "82210985311000A",
+      "out_separate_no": "TEST{{out_trade_no}}",
+      "total_amt": "2",
+      "cal_type": "0",
+      "recv_datas": [
+        { "recv_merchant_no": "82210985311000A", "separate_value": "1" },
+        { "recv_no": "SR2023011215004", "separate_value": "1" }
+      ]
+    }
+  },
+  "response_example": {
+    "code": "SACS0000",
+    "msg": "成功",
+    "resp_time": "20230330161834",
+    "resp_data": {
+      "separate_no": "2023033077010886602475000000",
+      "out_separate_no": "TEST2023033001",
+      "status": "PROCESSING",
+      "total_amt": "2"
+    }
+  }
+}
