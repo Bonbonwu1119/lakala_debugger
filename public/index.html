@@ -1774,7 +1774,7 @@ const INLINE_SCHEMAS = {
     "id": "cashier_create",
     "category": "支付交易类接口",
     "name": "收银台订单创建",
-    "description": "创建收银台订单, 返回 counter_url 让客户跳转到拉卡拉收银台页面完成支付. 支持多种支付方式聚合展示 (微信/支付宝/银联/数币/花呗/京东白条等). 请求/响应明文 JSON, 仅加签.",
+    "description": "创建收银台订单, 返回 counter_url 让客户跳转到拉卡拉收银台页面完成支付.\n支持多种支付方式聚合展示 (微信/支付宝/银联/数币/花呗/京东白条等).\n请求/响应明文 JSON, 仅做 SHA256withRSA 加签/验签.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/create",
     "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/create",
@@ -1793,7 +1793,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.out_order_no",
         "required": true,
-        "desc": "商户订单号"
+        "desc": "商户订单号 (商户系统唯一)"
       },
       {
         "path": "req_data.merchant_no",
@@ -1803,12 +1803,12 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.total_amount",
         "required": true,
-        "desc": "订单金额, 单位: 分"
+        "desc": "订单金额, 单位: 分 (字符串)"
       },
       {
         "path": "req_data.order_efficient_time",
         "required": true,
-        "desc": "订单有效期 yyyyMMddHHmmss, 最大下单时间 +2 天"
+        "desc": "订单有效期 yyyyMMddHHmmss, 最长支持下单后 7 天"
       },
       {
         "path": "req_data.order_info",
@@ -1816,24 +1816,14 @@ const INLINE_SCHEMAS = {
         "desc": "订单标题 (账户端使用, 不支持 emoji)"
       },
       {
-        "path": "req_data.vpos_id",
-        "required": false,
-        "desc": "交易设备标识 (非合单场景必传, 取进件接口返回的 termId)"
-      },
-      {
-        "path": "req_data.channel_id",
-        "required": false,
-        "desc": "渠道号"
-      },
-      {
-        "path": "req_data.busi_mode",
-        "required": false,
-        "desc": "业务模式: ACQ-收单 (默认)"
-      },
-      {
         "path": "req_data.notify_url",
         "required": false,
-        "desc": "订单支付成功后商户接收通知地址"
+        "desc": "订单支付成功后商户接收异步通知地址"
+      },
+      {
+        "path": "req_data.callback_url",
+        "required": false,
+        "desc": "客户端支付完成后跳回的商户页面地址"
       },
       {
         "path": "req_data.support_cancel",
@@ -1851,14 +1841,49 @@ const INLINE_SCHEMAS = {
         "desc": "是否支持多次发起支付 0/1, 默认 0"
       },
       {
+        "path": "req_data.repeat_pay_auto_refund",
+        "required": false,
+        "desc": "重复支付时是否自动退货 0/1 (默认 0, 不自动退). 详细了解后再上送"
+      },
+      {
+        "path": "req_data.close_order_auto_refund",
+        "required": false,
+        "desc": "关闭订单后已支付成功的资金是否自动退货 0/1 (默认 0, 不自动退)"
+      },
+      {
+        "path": "req_data.repeat_pay_notify",
+        "required": false,
+        "desc": "重复支付时是否通知商户 0/1, 默认 0"
+      },
+      {
+        "path": "req_data.counter_param",
+        "required": false,
+        "desc": "收银台展示参数 (JSON 字符串). 例: {\"pay_mode\":\"ALIPAY\"} 指定默认显示支付宝"
+      },
+      {
+        "path": "req_data.vpos_id",
+        "required": false,
+        "desc": "交易设备标识 (非合单场景), 进件接口返回的 termId"
+      },
+      {
         "path": "req_data.term_no",
         "required": false,
         "desc": "结算终端号 (合单场景必传)"
       },
       {
+        "path": "req_data.channel_id",
+        "required": false,
+        "desc": "渠道号"
+      },
+      {
+        "path": "req_data.busi_mode",
+        "required": false,
+        "desc": "业务模式: ACQ-收单 (默认)"
+      },
+      {
         "path": "req_data.split_mark",
         "required": false,
-        "desc": "合单标识: 1=合单, 默认不填"
+        "desc": "合单标识: 1=合单, 不填默认非合单"
       },
       {
         "path": "req_data.settle_type",
@@ -1871,24 +1896,9 @@ const INLINE_SCHEMAS = {
         "desc": "拆单信息列表 (split_mark=1 时必传)"
       },
       {
-        "path": "req_data.counter_param",
-        "required": false,
-        "desc": "收银台展示参数 (JSON 字符串)"
-      },
-      {
-        "path": "req_data.counter_remark",
-        "required": false,
-        "desc": "收银台备注 (不支持 emoji)"
-      },
-      {
         "path": "req_data.busi_type_param",
         "required": false,
         "desc": "业务类型控制参数 (JSON 字符串)"
-      },
-      {
-        "path": "req_data.callback_url",
-        "required": false,
-        "desc": "客户端支付完成后返回的商户地址"
       },
       {
         "path": "req_data.out_user_id",
@@ -1904,24 +1914,31 @@ const INLINE_SCHEMAS = {
         "path": "req_data.shop_name",
         "required": false,
         "desc": "网点名称"
+      },
+      {
+        "path": "req_data.counter_remark",
+        "required": false,
+        "desc": "收银台备注 (不支持 emoji)"
       }
     ],
     "example": {
-      "req_time": "{{req_time}}",
-      "version": "3.0",
       "req_data": {
         "out_order_no": "{{out_trade_no}}",
         "merchant_no": "82229007392000A",
-        "vpos_id": "587365941625155584",
         "total_amount": "1",
-        "busi_mode": "ACQ",
-        "order_efficient_time": "20260714170000",
-        "notify_url": "http://example.com/notify",
-        "support_cancel": "0",
+        "order_efficient_time": "20260520120000",
+        "notify_url": "https://example.com/notify",
+        "callback_url": "https://example.com/callback",
         "support_refund": "1",
         "support_repeat_pay": "1",
-        "order_info": "测试订单"
-      }
+        "support_cancel": "0",
+        "order_info": "测试订单",
+        "repeat_pay_auto_refund": "1",
+        "close_order_auto_refund": "1",
+        "counter_param": "{\"pay_mode\":\"ALIPAY\"}"
+      },
+      "req_time": "{{req_time}}",
+      "version": "3.0"
     },
     "response_example": {
       "code": "000000",
@@ -1930,11 +1947,11 @@ const INLINE_SCHEMAS = {
       "resp_data": {
         "merchant_no": "82229007392000A",
         "channel_id": "25",
-        "out_order_no": "KFPT...",
+        "out_order_no": "L16440B39AB3191",
         "order_create_time": "20240626155843",
-        "order_efficient_time": "20240628170000",
+        "order_efficient_time": "20240703155843",
         "pay_order_no": "21692211012001976631006488656",
-        "counter_url": "http://q.huijingcai.top/b/pay?merchantNo=...&payOrderNo=..."
+        "counter_url": "http://payment.lakala.com/b/pay?merchantNo=...&payOrderNo=..."
       }
     }
   },
