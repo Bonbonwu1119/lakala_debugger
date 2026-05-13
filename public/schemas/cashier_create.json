@@ -1,0 +1,68 @@
+{
+  "id": "cashier_create",
+  "category": "支付交易类接口",
+  "name": "收银台订单创建",
+  "description": "创建收银台订单, 返回 counter_url 让客户跳转到拉卡拉收银台页面完成支付. 支持多种支付方式聚合展示 (微信/支付宝/银联/数币/花呗/京东白条等). 请求/响应明文 JSON, 仅加签.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/create",
+  "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/create",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                            "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                           "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.out_order_no",              "required": true,  "desc": "商户订单号" },
+    { "path": "req_data.merchant_no",               "required": true,  "desc": "商户号" },
+    { "path": "req_data.total_amount",              "required": true,  "desc": "订单金额, 单位: 分" },
+    { "path": "req_data.order_efficient_time",      "required": true,  "desc": "订单有效期 yyyyMMddHHmmss, 最大下单时间 +2 天" },
+    { "path": "req_data.order_info",                "required": true,  "desc": "订单标题 (账户端使用, 不支持 emoji)" },
+    { "path": "req_data.vpos_id",                   "required": false, "desc": "交易设备标识 (非合单场景必传, 取进件接口返回的 termId)" },
+    { "path": "req_data.channel_id",                "required": false, "desc": "渠道号" },
+    { "path": "req_data.busi_mode",                 "required": false, "desc": "业务模式: ACQ-收单 (默认)" },
+    { "path": "req_data.notify_url",                "required": false, "desc": "订单支付成功后商户接收通知地址" },
+    { "path": "req_data.support_cancel",            "required": false, "desc": "是否支持撤销 0/1, 默认 0" },
+    { "path": "req_data.support_refund",            "required": false, "desc": "是否支持退款 0/1, 默认 0" },
+    { "path": "req_data.support_repeat_pay",        "required": false, "desc": "是否支持多次发起支付 0/1, 默认 0" },
+    { "path": "req_data.term_no",                   "required": false, "desc": "结算终端号 (合单场景必传)" },
+    { "path": "req_data.split_mark",                "required": false, "desc": "合单标识: 1=合单, 默认不填" },
+    { "path": "req_data.settle_type",               "required": false, "desc": "结算类型 (非合单): 0 或空=常规" },
+    { "path": "req_data.out_split_info",            "required": false, "desc": "拆单信息列表 (split_mark=1 时必传)" },
+    { "path": "req_data.counter_param",             "required": false, "desc": "收银台展示参数 (JSON 字符串)" },
+    { "path": "req_data.counter_remark",            "required": false, "desc": "收银台备注 (不支持 emoji)" },
+    { "path": "req_data.busi_type_param",           "required": false, "desc": "业务类型控制参数 (JSON 字符串)" },
+    { "path": "req_data.callback_url",              "required": false, "desc": "客户端支付完成后返回的商户地址" },
+    { "path": "req_data.out_user_id",               "required": false, "desc": "发起订单方 userId" },
+    { "path": "req_data.product_id",                "required": false, "desc": "指定产品编号 (如 000009 线上外卡)" },
+    { "path": "req_data.shop_name",                 "required": false, "desc": "网点名称" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "out_order_no": "{{out_trade_no}}",
+      "merchant_no": "82229007392000A",
+      "vpos_id": "587365941625155584",
+      "total_amount": "1",
+      "busi_mode": "ACQ",
+      "order_efficient_time": "20260714170000",
+      "notify_url": "http://example.com/notify",
+      "support_cancel": "0",
+      "support_refund": "1",
+      "support_repeat_pay": "1",
+      "order_info": "测试订单"
+    }
+  },
+  "response_example": {
+    "code": "000000",
+    "msg": "操作成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "channel_id": "25",
+      "out_order_no": "KFPT...",
+      "order_create_time": "20240626155843",
+      "order_efficient_time": "20240628170000",
+      "pay_order_no": "21692211012001976631006488656",
+      "counter_url": "http://q.huijingcai.top/b/pay?merchantNo=...&payOrderNo=..."
+    }
+  }
+}

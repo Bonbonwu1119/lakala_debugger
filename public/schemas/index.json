@@ -10,7 +10,9 @@
     {
       "name": "支付交易类接口",
       "groups": [
-        { "name": "扫码收单", "interfaces": ["trans_preorder"] }
+        { "name": "聚合支付", "interfaces": ["aggregate_active_scan", "aggregate_passive_scan", "aggregate_trans_query"] },
+        { "name": "收银台",   "interfaces": ["cashier_create", "cashier_query", "cashier_close"] },
+        { "name": "退货",     "interfaces": ["refund", "refund_query"] }
       ]
     },
     {

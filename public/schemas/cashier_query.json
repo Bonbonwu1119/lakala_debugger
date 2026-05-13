@@ -1,0 +1,50 @@
+{
+  "id": "cashier_query",
+  "category": "支付交易类接口",
+  "name": "收银台订单查询",
+  "description": "查询收银台订单状态. out_order_no + merchant_no 或 pay_order_no + merchant_no 二选一. 如果创建时传了 channel_id, 查询时也必须传同一个 channel_id. 返回订单状态 + 所有子交易明细 (合单场景).",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/query",
+  "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/query",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",               "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.merchant_no",   "required": true,  "desc": "商户号" },
+    { "path": "req_data.out_order_no",  "required": false, "desc": "商户订单号 (与 pay_order_no 二选一)" },
+    { "path": "req_data.pay_order_no",  "required": false, "desc": "支付订单号 (与 out_order_no 二选一)" },
+    { "path": "req_data.channel_id",    "required": false, "desc": "渠道号 (创建时传了就要传)" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "pay_order_no": "21692211012001976631006488642",
+      "merchant_no": "82216061412000G",
+      "channel_id": "15"
+    }
+  },
+  "response_example": {
+    "code": "000000",
+    "msg": "操作成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "pay_order_no": "21692211012001976631006488642",
+      "out_order_no": "LABS1632300253YDMG",
+      "channel_id": "15",
+      "merchant_no": "82216295947000G",
+      "order_status": "2",
+      "total_amount": 3300,
+      "order_create_time": "20240619164413",
+      "order_trade_info_list": [
+        {
+          "trade_no": "20216922512100000010",
+          "log_No": "51200283000010",
+          "trade_status": "2",
+          "trade_amount": 3300,
+          "busi_type": "SCPAY"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "id": "aggregate_trans_query",
+  "category": "支付交易类接口",
+  "name": "聚合交易查询",
+  "description": "查询主扫/被扫交易状态. 返回 code=BBS00000 仅表示查到了这笔交易, 交易实际成功与否要看响应里的 trade_state 字段 (SUCCESS / FAIL / DEAL / PART_REFUND ...). out_trade_no / trade_no 二选一, 优先级: trade_no > out_trade_no. 请求/响应明文 JSON.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/query/tradequery",
+  "url_prod": "https://s2.lakala.com/api/v3/labs/query/tradequery",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                  "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                 "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "out_org_code",             "required": false, "desc": "组织代码" },
+    { "path": "req_data.merchant_no",     "required": true,  "desc": "商户号" },
+    { "path": "req_data.term_no",         "required": true,  "desc": "终端号" },
+    { "path": "req_data.out_trade_no",    "required": false, "desc": "商户交易流水号 (与 trade_no 二选一)" },
+    { "path": "req_data.trade_no",        "required": false, "desc": "拉卡拉交易流水号 (与 out_trade_no 二选一)" },
+    { "path": "req_data.trade_req_date",  "required": false, "desc": "交易请求日期 yyyyMMdd, 上送原商户交易流水号时必填" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "out_org_code": "OP00000003",
+    "req_data": {
+      "merchant_no": "82229007392000A",
+      "term_no": "29834765",
+      "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E",
+      "trade_no": "2024062600210683600877",
+      "log_no": "00210683600877",
+      "trade_state": "SUCCESS",
+      "trade_state_desc": "交易成功",
+      "account_type": "WECHAT",
+      "total_amount": "123",
+      "payer_amount": "123",
+      "trade_time": "20240626155827"
+    }
+  }
+}

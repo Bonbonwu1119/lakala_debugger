@@ -1,0 +1,70 @@
+{
+  "id": "aggregate_active_scan",
+  "category": "支付交易类接口",
+  "name": "聚合主扫 (用户扫商户码)",
+  "description": "聚合支付 - 主扫场景：用户用 App 扫商户的码，发起支付。支持支付宝/微信/银联/数字人民币/翼支付/苏宁等。返回二维码或预下单 ID 给商户去拉起支付。请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签。",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/preorder",
+  "url_prod": "https://s2.lakala.com/api/v3/labs/trans/preorder",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                              "required": true,  "desc": "接口版本号, 固定 3.0" },
+    { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss (工具自动填)" },
+    { "path": "out_org_code",                         "required": false, "desc": "组织代码 (机构方代发场景)" },
+    { "path": "req_data.merchant_no",                 "required": true,  "desc": "商户号 (拉卡拉分配)" },
+    { "path": "req_data.term_no",                     "required": true,  "desc": "终端号 (拉卡拉分配的业务终端)" },
+    { "path": "req_data.out_trade_no",                "required": true,  "desc": "商户交易流水号, 唯一" },
+    { "path": "req_data.account_type",                "required": true,  "desc": "钱包类型: WECHAT/ALIPAY/UQRCODEPAY(银联)/DCPAY(数币)/BESTPAY(翼支付)/SUNING(苏宁) ..." },
+    { "path": "req_data.trans_type",                  "required": true,  "desc": "接入方式: 41=NATIVE(扫码 ALIPAY/银联/京东白条) / 51=JSAPI(微信公众号/银联JS/翼支付) / 61=APP / 71=微信小程序 / 81=H5" },
+    { "path": "req_data.total_amount",                "required": true,  "desc": "金额, 单位: 分" },
+    { "path": "req_data.location_info",               "required": true,  "desc": "地址位置信息 (风控要求)" },
+    { "path": "req_data.location_info.request_ip",    "required": true,  "desc": "请求方 IP, 必填" },
+    { "path": "req_data.location_info.base_station",  "required": false, "desc": "基站信息" },
+    { "path": "req_data.location_info.location",      "required": false, "desc": "纬度经度, 格式 +23.137208/+113.381982" },
+    { "path": "req_data.busi_mode",                   "required": false, "desc": "业务模式: ACQ-收单" },
+    { "path": "req_data.subject",                     "required": false, "desc": "订单标题 (最多 42 字符)" },
+    { "path": "req_data.pay_order_no",                "required": false, "desc": "拉卡拉支付业务订单号" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "商户通知地址 (支付成功后回调)" },
+    { "path": "req_data.settle_type",                 "required": false, "desc": "结算类型: 0 或空=常规结算" },
+    { "path": "req_data.remark",                      "required": false, "desc": "备注" },
+    { "path": "req_data.promo_info",                  "required": false, "desc": "拉卡拉优惠相关信息" },
+    { "path": "req_data.acc_busi_fields",             "required": false, "desc": "账户端业务信息域, 不同 account_type + trans_type 需要不同子字段 (见拉卡拉文档)" },
+    { "path": "req_data.out_order_no",                "required": false, "desc": "外部订单号" },
+    { "path": "req_data.pnr_ins_id_cd",               "required": false, "desc": "银联服务商机构标识码" },
+    { "path": "req_data.qb_amount",                   "required": false, "desc": "区补优惠金额 (分)" },
+    { "path": "req_data.gb_amount",                   "required": false, "desc": "国补优惠金额 (分)" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "merchant_no": "82229007392000A",
+      "term_no": "D9296400",
+      "out_trade_no": "{{out_trade_no}}",
+      "account_type": "ALIPAY",
+      "trans_type": "41",
+      "total_amount": "1",
+      "notify_url": "http://example.com/notify",
+      "location_info": {
+        "request_ip": "192.168.1.1",
+        "location": "+23.137208/+113.381982"
+      },
+      "subject": "测试订单"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "out_trade_no": "TEST123456789",
+      "trade_no": "2024062666210315450047",
+      "log_no": "66210315450047",
+      "acc_resp_fields": {
+        "code": "https://qr.alipay.com/...",
+        "code_image": ""
+      }
+    }
+  }
+}

@@ -16,6 +16,13 @@ lakala-debugger.tar.gz
 .env
 .env.*
 
+# tesseract.js 下载的语言模型 (build_inline.js 用)
+*.traineddata
+*.traineddata.gz
+
+# OCR 临时输出
+_pdf_ocr_out/
+
 # 编辑器 / 系统
 .vscode/
 .idea/

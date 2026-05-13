@@ -1,0 +1,59 @@
+{
+  "id": "aggregate_passive_scan",
+  "category": "支付交易类接口",
+  "name": "聚合被扫 (商户扫用户码)",
+  "description": "聚合支付 - 被扫场景: 商户终端扫用户 App 里的付款码 (条形码/二维码) 完成支付. 支持微信(10-15开头)/支付宝(25-30开头)/银联(62开头)/数币(01开头)/翼支付(51开头)/苏宁(83开头). 请求/响应明文 JSON, 仅加签/验签.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/micropay",
+  "url_prod": "https://s2.lakala.com/api/v3/labs/trans/micropay",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                              "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "out_org_code",                         "required": false, "desc": "组织代码" },
+    { "path": "req_data.merchant_no",                 "required": true,  "desc": "商户号" },
+    { "path": "req_data.term_no",                     "required": true,  "desc": "终端号" },
+    { "path": "req_data.out_trade_no",                "required": true,  "desc": "商户交易流水号, 不可重复" },
+    { "path": "req_data.auth_code",                   "required": true,  "desc": "支付授权码 (设备读取用户 App 里的付款码), 不同账户类型前缀不同" },
+    { "path": "req_data.total_amount",                "required": true,  "desc": "金额, 单位: 分" },
+    { "path": "req_data.location_info",               "required": true,  "desc": "地址位置信息" },
+    { "path": "req_data.location_info.request_ip",    "required": true,  "desc": "请求方 IP" },
+    { "path": "req_data.busi_mode",                   "required": false, "desc": "业务模式: ACQ-收单" },
+    { "path": "req_data.subject",                     "required": false, "desc": "订单标题" },
+    { "path": "req_data.pay_order_no",                "required": false, "desc": "拉卡拉支付业务订单号" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "商户通知地址" },
+    { "path": "req_data.settle_type",                 "required": false, "desc": "结算类型: 0 或空=常规" },
+    { "path": "req_data.scan_type",                   "required": false, "desc": "扫码类型: 0=普通扫码 1=微信刷脸 3=押金支付..." },
+    { "path": "req_data.acc_busi_fields",             "required": false, "desc": "账户端业务信息域 (按 auth_code 类型填)" },
+    { "path": "req_data.out_order_no",                "required": false, "desc": "外部订单号" },
+    { "path": "req_data.term_info",                   "required": false, "desc": "终端信息 (加密因子/密文数据)" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "merchant_no": "82229007392000A",
+      "term_no": "29834765",
+      "out_trade_no": "{{out_trade_no}}",
+      "auth_code": "135178236713755638",
+      "total_amount": "123",
+      "location_info": {
+        "request_ip": "192.168.1.1"
+      },
+      "notify_url": "http://example.com/notify",
+      "subject": "测试订单"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E",
+      "account_type": "WECHAT",
+      "total_amount": "123",
+      "trade_state": "SUCCESS"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "refund",
+  "category": "支付交易类接口",
+  "name": "统一退货 (前置退货系统)",
+  "description": "对原交易做退货. 原交易必须是已成功状态. 通过 origin_log_no / origin_out_trade_no / origin_trade_no 任一定位原交易. 支持全额或部分退货. 异步处理, 调用后建议 30s 后再调用退货查询接口. 请求/响应明文 JSON.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/rfd/refund_front/refund",
+  "url_prod": "https://s2.lakala.com/api/v3/rfd/refund_front/refund",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                              "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",                             "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.merchant_no",                 "required": true,  "desc": "商户号 (拉卡拉分配, 长度 15)" },
+    { "path": "req_data.term_no",                     "required": true,  "desc": "终端号 (拉卡拉分配, 长度 8)" },
+    { "path": "req_data.out_trade_no",                "required": true,  "desc": "商户请求流水号, 商户系统唯一, 此次退货操作的流水号 (不是原交易流水号)" },
+    { "path": "req_data.refund_amount",               "required": true,  "desc": "退款金额, 单位: 分, 正整数字符串" },
+    { "path": "req_data.location_info",               "required": true,  "desc": "地址位置信息" },
+    { "path": "req_data.location_info.request_ip",    "required": true,  "desc": "请求方 IP" },
+    { "path": "req_data.refund_reason",               "required": false, "desc": "退货原因" },
+    { "path": "req_data.origin_log_no",               "required": false, "desc": "原拉卡拉对账单流水号 (与 origin_out_trade_no / origin_trade_no 任一)" },
+    { "path": "req_data.origin_out_trade_no",         "required": false, "desc": "原商户交易流水号" },
+    { "path": "req_data.origin_trade_no",             "required": false, "desc": "原拉卡拉交易订单号" },
+    { "path": "req_data.refund_acc_mode",             "required": false, "desc": "退货账户模式" },
+    { "path": "req_data.notify_url",                  "required": false, "desc": "后台通知地址 (退货成功后异步回调)" },
+    { "path": "req_data.refund_amt_sts",              "required": false, "desc": "退货资金状态 (分账场景用)" },
+    { "path": "req_data.foreign_currency_type",       "required": false, "desc": "外币币种 (外卡场景)" },
+    { "path": "req_data.foreign_currency_amount",     "required": false, "desc": "外币金额" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "merchant_no": "82229007392000A",
+      "term_no": "D9296400",
+      "out_trade_no": "{{out_trade_no}}",
+      "refund_amount": "1",
+      "refund_reason": "用户申请退款",
+      "origin_out_trade_no": "原交易商户流水号",
+      "location_info": {
+        "request_ip": "192.168.1.1"
+      },
+      "notify_url": "http://example.com/refund-notify"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "trade_state": "SUCCESS",
+      "refund_type": "PART",
+      "merchant_no": "82229007392000A",
+      "out_trade_no": "TEST123456",
+      "trade_no": "2024062600210683600877",
+      "log_no": "00210683600877",
+      "total_amount": "100",
+      "refund_amount": "1",
+      "payer_amount": "1",
+      "trade_time": "20240626155843"
+    }
+  }
+}

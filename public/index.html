@@ -679,206 +679,1661 @@ const SM4 = (function() {
 // ==================== 内嵌 schema (file:// 离线打开 / 服务转发失败时的后备) ====================
 // 服务正常时优先从 schemas/*.json 加载, 失败才用这里
 const INLINE_SCHEMAS_INDEX = {
+  "_comment": "支持两种写法: 'interfaces': [...] 扁平; 或 'groups': [{name, interfaces}, ...] 嵌套两级",
   "categories": [
     {
       "name": "开户进件类接口",
       "groups": [
-        { "name": "拓客 SAAS", "interfaces": ["merchant_register", "file_upload", "open_merchant_info"] }
+        {
+          "name": "拓客 SAAS",
+          "interfaces": [
+            "merchant_register",
+            "file_upload",
+            "open_merchant_info"
+          ]
+        }
       ]
     },
     {
       "name": "支付交易类接口",
       "groups": [
-        { "name": "扫码收单", "interfaces": ["trans_preorder"] }
+        {
+          "name": "聚合支付",
+          "interfaces": [
+            "aggregate_active_scan",
+            "aggregate_passive_scan",
+            "aggregate_trans_query"
+          ]
+        },
+        {
+          "name": "收银台",
+          "interfaces": [
+            "cashier_create",
+            "cashier_query",
+            "cashier_close"
+          ]
+        },
+        {
+          "name": "退货",
+          "interfaces": [
+            "refund",
+            "refund_query"
+          ]
+        }
       ]
     },
-    { "name": "分账提现类接口", "groups": [] },
+    {
+      "name": "分账提现类接口",
+      "groups": []
+    },
     {
       "name": "附加功能类接口",
       "groups": [
-        { "name": "营销活动", "interfaces": ["coupon_member_query"] }
+        {
+          "name": "营销活动",
+          "interfaces": [
+            "coupon_member_query"
+          ]
+        }
       ]
     }
   ]
 };
 const INLINE_SCHEMAS = {
-  "trans_preorder": {
-    "id": "trans_preorder", "category": "支付交易类接口", "name": "交易预下单",
-    "description": "商户下单后获取支付参数，调起支付。支持支付宝、微信、云闪付等支付方式。",
+  "merchant_register": {
+    "id": "merchant_register",
+    "category": "开户进件类接口",
+    "name": "新增进件",
+    "description": "拓客 SAAS 新增进件接口。整体报文 SM4 加密：HTTP 请求 body 是一段 base64 密文（不是 JSON），响应 body 也是 base64 密文；签名对密文做。req_data 字段非常多，下面字段说明只列了主要项，按实际文档增删。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/merchant_encry",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/merchant_encry",
+    "doc_url": "",
+    "encrypt": {
+      "request": {
+        "mode": "whole"
+      },
+      "response": {
+        "mode": "whole"
+      }
+    },
+    "fields": [
+      {
+        "path": "ver",
+        "type": "string",
+        "required": true,
+        "desc": "接口版本号，1.0"
+      },
+      {
+        "path": "timestamp",
+        "type": "string",
+        "required": true,
+        "desc": "毫秒级时间戳字符串 (工具自动填)"
+      },
+      {
+        "path": "req_id",
+        "type": "string",
+        "required": true,
+        "desc": "请求流水号 (工具自动填)"
+      },
+      {
+        "path": "req_data",
+        "type": "object",
+        "required": true,
+        "desc": "进件业务数据 — 整个 body 会一起加密"
+      },
+      {
+        "path": "req_data.org_code",
+        "type": "string",
+        "required": true,
+        "desc": "组织代码 (拉卡拉分配)"
+      },
+      {
+        "path": "req_data.user_no",
+        "type": "string",
+        "required": true,
+        "desc": "代理商业务员编号"
+      },
+      {
+        "path": "req_data.source",
+        "type": "string",
+        "required": true,
+        "desc": "进件来源, 例: H5"
+      },
+      {
+        "path": "req_data.mer_type",
+        "type": "string",
+        "required": true,
+        "desc": "商户类型: TP_PERSONAL / TP_ENTERPRISE 等"
+      },
+      {
+        "path": "req_data.mer_name",
+        "type": "string",
+        "required": true,
+        "desc": "商户名称"
+      },
+      {
+        "path": "req_data.mer_reg_name",
+        "type": "string",
+        "required": true,
+        "desc": "商户注册名称"
+      },
+      {
+        "path": "req_data.mer_addr",
+        "type": "string",
+        "required": true,
+        "desc": "商户经营地址"
+      },
+      {
+        "path": "req_data.busi_code",
+        "type": "string",
+        "required": true,
+        "desc": "业务类型码: WECHAT_PAY 等"
+      },
+      {
+        "path": "req_data.contact_name",
+        "type": "string",
+        "required": true,
+        "desc": "联系人姓名"
+      },
+      {
+        "path": "req_data.contact_mobile",
+        "type": "string",
+        "required": true,
+        "desc": "联系人手机号"
+      },
+      {
+        "path": "req_data.email",
+        "type": "string",
+        "required": false,
+        "desc": "联系人邮箱"
+      },
+      {
+        "path": "req_data.lar_id_type",
+        "type": "string",
+        "required": true,
+        "desc": "法人证件类型, 01=身份证"
+      },
+      {
+        "path": "req_data.lar_name",
+        "type": "string",
+        "required": true,
+        "desc": "法人姓名"
+      },
+      {
+        "path": "req_data.lar_id_card",
+        "type": "string",
+        "required": true,
+        "desc": "法人证件号"
+      },
+      {
+        "path": "req_data.lar_id_card_start",
+        "type": "string",
+        "required": true,
+        "desc": "法人证件起始日 yyyy-MM-dd"
+      },
+      {
+        "path": "req_data.lar_id_card_end",
+        "type": "string",
+        "required": true,
+        "desc": "法人证件到期日 yyyy-MM-dd, 长期写 9999-12-31"
+      },
+      {
+        "path": "req_data.license_no",
+        "type": "string",
+        "required": false,
+        "desc": "营业执照号 (个体/企业必填)"
+      },
+      {
+        "path": "req_data.license_name",
+        "type": "string",
+        "required": false,
+        "desc": "营业执照名称"
+      },
+      {
+        "path": "req_data.license_dt_start",
+        "type": "string",
+        "required": false,
+        "desc": "营业执照起始日"
+      },
+      {
+        "path": "req_data.license_dt_end",
+        "type": "string",
+        "required": false,
+        "desc": "营业执照到期日, 长期 9999-12-31"
+      },
+      {
+        "path": "req_data.account_type",
+        "type": "string",
+        "required": true,
+        "desc": "结算账户类型, 58=对私借记卡"
+      },
+      {
+        "path": "req_data.account_name",
+        "type": "string",
+        "required": true,
+        "desc": "结算户名"
+      },
+      {
+        "path": "req_data.account_no",
+        "type": "string",
+        "required": true,
+        "desc": "结算账号"
+      },
+      {
+        "path": "req_data.account_id_card",
+        "type": "string",
+        "required": true,
+        "desc": "结算人证件号"
+      },
+      {
+        "path": "req_data.account_id_dt_start",
+        "type": "string",
+        "required": true,
+        "desc": "结算人证件起始日"
+      },
+      {
+        "path": "req_data.account_id_dt_end",
+        "type": "string",
+        "required": true,
+        "desc": "结算人证件到期日"
+      },
+      {
+        "path": "req_data.openning_bank_code",
+        "type": "string",
+        "required": true,
+        "desc": "开户行联行号"
+      },
+      {
+        "path": "req_data.openning_bank_name",
+        "type": "string",
+        "required": true,
+        "desc": "开户行名称"
+      },
+      {
+        "path": "req_data.clearing_bank_code",
+        "type": "string",
+        "required": true,
+        "desc": "清算行号"
+      },
+      {
+        "path": "req_data.settle_type",
+        "type": "string",
+        "required": true,
+        "desc": "结算方式, D1 = T+1"
+      },
+      {
+        "path": "req_data.province_code",
+        "type": "string",
+        "required": true,
+        "desc": "省码"
+      },
+      {
+        "path": "req_data.city_code",
+        "type": "string",
+        "required": true,
+        "desc": "市码"
+      },
+      {
+        "path": "req_data.county_code",
+        "type": "string",
+        "required": true,
+        "desc": "区/县码"
+      },
+      {
+        "path": "req_data.settle_province_code",
+        "type": "string",
+        "required": true,
+        "desc": "结算省码"
+      },
+      {
+        "path": "req_data.settle_province_name",
+        "type": "string",
+        "required": true,
+        "desc": "结算省名"
+      },
+      {
+        "path": "req_data.settle_city_code",
+        "type": "string",
+        "required": true,
+        "desc": "结算市码"
+      },
+      {
+        "path": "req_data.settle_city_name",
+        "type": "string",
+        "required": true,
+        "desc": "结算市名"
+      },
+      {
+        "path": "req_data.latitude",
+        "type": "string",
+        "required": false,
+        "desc": "纬度"
+      },
+      {
+        "path": "req_data.longtude",
+        "type": "string",
+        "required": false,
+        "desc": "经度"
+      },
+      {
+        "path": "req_data.business_content",
+        "type": "string",
+        "required": true,
+        "desc": "经营内容"
+      },
+      {
+        "path": "req_data.attchments",
+        "type": "array",
+        "required": true,
+        "desc": "附件清单, 元素 {id, type}, type 例: CHECKSTAND_IMG / SHOP_OUTSIDE_IMG / SHOP_INSIDE_IMG / LICENSE_IMG ..."
+      },
+      {
+        "path": "req_data.biz_content",
+        "type": "object",
+        "required": true,
+        "desc": "业务参数"
+      },
+      {
+        "path": "req_data.biz_content.activity_id",
+        "type": "string",
+        "required": true,
+        "desc": "活动 ID"
+      },
+      {
+        "path": "req_data.biz_content.mcc",
+        "type": "string",
+        "required": true,
+        "desc": "MCC 行业代码"
+      },
+      {
+        "path": "req_data.biz_content.term_num",
+        "type": "string",
+        "required": true,
+        "desc": "终端数量"
+      },
+      {
+        "path": "req_data.biz_content.fees",
+        "type": "array",
+        "required": true,
+        "desc": "费率清单, 元素 {fee_code, fee_value, [top_fee]}"
+      }
+    ],
+    "example": {
+      "ver": "1.0",
+      "timestamp": "{{timestamp_ms}}",
+      "req_id": "{{req_id}}",
+      "req_data": {
+        "org_code": "200028",
+        "lar_id_type": "01",
+        "attchments": [
+          {
+            "id": "merchant/null/20231227172245221010CHECKSTAND_IMG.png",
+            "type": "CHECKSTAND_IMG"
+          },
+          {
+            "id": "merchant/null/20231227172251776083SHOP_OUTSIDE_IMG.png",
+            "type": "SHOP_OUTSIDE_IMG"
+          }
+        ],
+        "license_no": "92450202MA5MWYQK23",
+        "account_name": "徐丽",
+        "city_code": "6140",
+        "user_no": "20000101",
+        "latitude": "114.034257",
+        "biz_content": {
+          "activity_id": "37",
+          "fees": [
+            {
+              "fee_code": "WECHAT",
+              "fee_value": "0.60"
+            },
+            {
+              "fee_code": "ALIPAY",
+              "fee_value": "0.60"
+            },
+            {
+              "fee_code": "SCAN_PAY",
+              "fee_value": "0.60"
+            },
+            {
+              "top_fee": "20",
+              "fee_code": "DEBIT_CARD",
+              "fee_value": "0.38"
+            },
+            {
+              "fee_code": "CREDIT_CARD",
+              "fee_value": "0.6"
+            },
+            {
+              "top_fee": "20",
+              "fee_code": "UNIONPAY_WALLET_DEBIT_FEE",
+              "fee_value": "0.38"
+            },
+            {
+              "fee_code": "UNIONPAY_WALLET_CREDIT_FEE",
+              "fee_value": "0.6"
+            }
+          ],
+          "mcc": "11002",
+          "term_num": "1"
+        },
+        "mer_name": "转发进件测试",
+        "openning_bank_name": "中国农业银行广西柳州市柳南支行营业室",
+        "settle_city_name": "柳州市",
+        "source": "H5",
+        "license_dt_end": "9999-12-31",
+        "settle_province_code": "45",
+        "longtude": "22.663572",
+        "account_no": "6228480850854176714",
+        "lar_name": "徐哈哈",
+        "lar_id_card_start": "2015-01-16",
+        "email": "2804711849@qq.com",
+        "openning_bank_code": "103614010818",
+        "contact_mobile": "18276770550",
+        "account_id_dt_start": "2015-01-16",
+        "lar_id_card": "460027200111297612",
+        "settle_city_code": "6140",
+        "province_code": "6100",
+        "contact_name": "徐哈哈",
+        "busi_code": "WECHAT_PAY",
+        "account_type": "58",
+        "license_name": "烟酒行批发24小时",
+        "mer_addr": "柳州市解放南路金鱼巷1号花旗壹号楼15-10",
+        "license_dt_start": "2017-11-21",
+        "lar_id_card_end": "2035-01-16",
+        "county_code": "986140",
+        "account_id_dt_end": "2035-01-16",
+        "mer_reg_name": "转发进件测试",
+        "account_id_card": "460027200111297612",
+        "settle_province_name": "广西",
+        "mer_type": "TP_PERSONAL",
+        "clearing_bank_code": "103100000026",
+        "business_content": "烟酒行批发24小时",
+        "settle_type": "D1"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "SUCCESS",
+      "resp_data": {
+        "merchant_no": "100148680",
+        "status": "WAIT_AUDI",
+        "state": "1"
+      }
+    }
+  },
+  "file_upload": {
+    "id": "file_upload",
+    "category": "开户进件类接口",
+    "name": "文件上传",
+    "description": "进件附件上传接口。请求/响应都是明文 JSON, 不加密。file_base64 用 data:image/...;base64,... 的 Data URL 格式。返回的 url 拿到后用作 attchments[].id 提交进件。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/customer/file/upload",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/customer/file/upload",
+    "doc_url": "",
+    "fields": [
+      {
+        "path": "ver",
+        "type": "string",
+        "required": true,
+        "desc": "版本号 1.0.0"
+      },
+      {
+        "path": "timestamp",
+        "type": "number",
+        "required": true,
+        "desc": "秒级时间戳"
+      },
+      {
+        "path": "req_data",
+        "type": "object",
+        "required": true,
+        "desc": "请求数据"
+      },
+      {
+        "path": "req_data.file_base64",
+        "type": "string",
+        "required": true,
+        "desc": "图片 Data URL: data:image/png;base64,xxx 或 data:image/jpeg;base64,xxx"
+      },
+      {
+        "path": "req_data.img_type",
+        "type": "string",
+        "required": true,
+        "desc": "图片类型: SHOP_INSIDE_IMG / SHOP_OUTSIDE_IMG / CHECKSTAND_IMG / LICENSE_IMG / ID_CARD_FRONT / ID_CARD_BACK / BANK_CARD ..."
+      },
+      {
+        "path": "req_data.sourcechnl",
+        "type": "string",
+        "required": false,
+        "desc": "来源渠道, 默认 0"
+      },
+      {
+        "path": "req_data.is_ocr",
+        "type": "string",
+        "required": false,
+        "desc": "是否 OCR 识别, true / false"
+      }
+    ],
+    "example": {
+      "ver": "1.0.0",
+      "timestamp": "{{timestamp}}",
+      "req_data": {
+        "file_base64": "data:image/png;base64,REPLACE_WITH_BASE64_DATA_URL",
+        "img_type": "SHOP_INSIDE_IMG",
+        "sourcechnl": "0",
+        "is_ocr": "false"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "SUCCESS",
+      "resp_data": {
+        "batch_no": null,
+        "status": "00",
+        "url": "merchant/imgages/20251123233957705762SHOP_INSIDE_IMG.jpeg",
+        "show_url": "https://lkl-zf-cdmp.oss-cn-shanghai.aliyuncs.com/pd/huituoke/merchant/imgages/...?Expires=...&Signature=..."
+      }
+    }
+  },
+  "open_merchant_info": {
+    "id": "open_merchant_info",
+    "category": "开户进件类接口",
+    "name": "商户信息查询",
+    "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一即可。",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",
+    "url_prod": "https://s2.lakala.com/api/v3/tkbs/open_merchant_info",
+    "doc_url": "",
+    "fields": [
+      {
+        "path": "ver",
+        "type": "string",
+        "required": true,
+        "desc": "版本号 1.0"
+      },
+      {
+        "path": "timestamp",
+        "type": "string",
+        "required": true,
+        "desc": "毫秒级时间戳字符串 (工具自动填)"
+      },
+      {
+        "path": "req_id",
+        "type": "string",
+        "required": true,
+        "desc": "请求流水号 (工具自动填)"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "type": "string",
+        "required": false,
+        "desc": "商户号 (与 customer_no 二选一)"
+      },
+      {
+        "path": "req_data.customer_no",
+        "type": "string",
+        "required": false,
+        "desc": "客户号 (与 merchant_no 二选一)"
+      },
+      {
+        "path": "req_data.org_code",
+        "type": "string",
+        "required": true,
+        "desc": "组织代码 (拉卡拉分配)"
+      }
+    ],
+    "example": {
+      "ver": "1.0",
+      "timestamp": "{{timestamp_ms}}",
+      "req_id": "{{req_id}}",
+      "req_data": {
+        "merchant_no": "",
+        "customer_no": "100138867",
+        "org_code": "200028"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "SUCCESS",
+      "resp_data": {
+        "settle_card": {
+          "bank_code": "01030000",
+          "account_no": "6228****5475",
+          "bank_name": "中国农业银行"
+        },
+        "shop_info_list": [
+          {
+            "shop_id": 32141,
+            "shop_name": "喜相逢酒店"
+          }
+        ],
+        "product_vos": [
+          {
+            "product": "WECHAT_PAY",
+            "product_name": "专业化扫码"
+          }
+        ],
+        "terminal_info": [
+          {
+            "term_type_name": "APP收款",
+            "term_no_list": [
+              "A9348031"
+            ]
+          }
+        ],
+        "customer": {
+          "customer_no": 100138867,
+          "mer_name": "喜相逢酒店",
+          "customer_status": "OPEN"
+        }
+      }
+    }
+  },
+  "aggregate_active_scan": {
+    "id": "aggregate_active_scan",
+    "category": "支付交易类接口",
+    "name": "聚合主扫 (用户扫商户码)",
+    "description": "聚合支付 - 主扫场景：用户用 App 扫商户的码，发起支付。支持支付宝/微信/银联/数字人民币/翼支付/苏宁等。返回二维码或预下单 ID 给商户去拉起支付。请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签。",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/preorder",
     "url_prod": "https://s2.lakala.com/api/v3/labs/trans/preorder",
-    "doc_url": "https://o.lakala.com",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
     "fields": [
-      { "path": "version", "type": "string", "required": true, "desc": "接口版本号，固定 3.0" },
-      { "path": "req_time", "type": "string", "required": true, "desc": "请求时间，格式 yyyyMMddHHmmss (发送时工具自动填充)" },
-      { "path": "req_data.merchant_no", "type": "string", "required": true, "desc": "拉卡拉分配的商户号" },
-      { "path": "req_data.term_no", "type": "string", "required": true, "desc": "拉卡拉分配的终端号" },
-      { "path": "req_data.out_trade_no", "type": "string", "required": true, "desc": "商户系统内的订单号，需保证唯一" },
-      { "path": "req_data.account_type", "type": "string", "required": true, "desc": "账户类型：ALIPAY=支付宝, WECHAT=微信, UNIONPAY=云闪付" },
-      { "path": "req_data.trans_type", "type": "string", "required": true, "desc": "交易类型：41=主扫(用户扫商户码), 47=被扫(商户扫用户码)" },
-      { "path": "req_data.total_amount", "type": "number", "required": true, "desc": "交易金额，单位：分" },
-      { "path": "req_data.notify_url", "type": "string", "required": false, "desc": "异步通知地址，交易结果会 POST 到这里" },
-      { "path": "req_data.subject", "type": "string", "required": false, "desc": "商品标题/订单标题" },
-      { "path": "req_data.location_info.request_ip", "type": "string", "required": false, "desc": "用户终端 IP" },
-      { "path": "req_data.location_info.location", "type": "string", "required": false, "desc": "用户终端地理位置，格式 +纬度/+经度" }
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号, 固定 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss (工具自动填)"
+      },
+      {
+        "path": "out_org_code",
+        "required": false,
+        "desc": "组织代码 (机构方代发场景)"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号 (拉卡拉分配)"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": true,
+        "desc": "终端号 (拉卡拉分配的业务终端)"
+      },
+      {
+        "path": "req_data.out_trade_no",
+        "required": true,
+        "desc": "商户交易流水号, 唯一"
+      },
+      {
+        "path": "req_data.account_type",
+        "required": true,
+        "desc": "钱包类型: WECHAT/ALIPAY/UQRCODEPAY(银联)/DCPAY(数币)/BESTPAY(翼支付)/SUNING(苏宁) ..."
+      },
+      {
+        "path": "req_data.trans_type",
+        "required": true,
+        "desc": "接入方式: 41=NATIVE(扫码 ALIPAY/银联/京东白条) / 51=JSAPI(微信公众号/银联JS/翼支付) / 61=APP / 71=微信小程序 / 81=H5"
+      },
+      {
+        "path": "req_data.total_amount",
+        "required": true,
+        "desc": "金额, 单位: 分"
+      },
+      {
+        "path": "req_data.location_info",
+        "required": true,
+        "desc": "地址位置信息 (风控要求)"
+      },
+      {
+        "path": "req_data.location_info.request_ip",
+        "required": true,
+        "desc": "请求方 IP, 必填"
+      },
+      {
+        "path": "req_data.location_info.base_station",
+        "required": false,
+        "desc": "基站信息"
+      },
+      {
+        "path": "req_data.location_info.location",
+        "required": false,
+        "desc": "纬度经度, 格式 +23.137208/+113.381982"
+      },
+      {
+        "path": "req_data.busi_mode",
+        "required": false,
+        "desc": "业务模式: ACQ-收单"
+      },
+      {
+        "path": "req_data.subject",
+        "required": false,
+        "desc": "订单标题 (最多 42 字符)"
+      },
+      {
+        "path": "req_data.pay_order_no",
+        "required": false,
+        "desc": "拉卡拉支付业务订单号"
+      },
+      {
+        "path": "req_data.notify_url",
+        "required": false,
+        "desc": "商户通知地址 (支付成功后回调)"
+      },
+      {
+        "path": "req_data.settle_type",
+        "required": false,
+        "desc": "结算类型: 0 或空=常规结算"
+      },
+      {
+        "path": "req_data.remark",
+        "required": false,
+        "desc": "备注"
+      },
+      {
+        "path": "req_data.promo_info",
+        "required": false,
+        "desc": "拉卡拉优惠相关信息"
+      },
+      {
+        "path": "req_data.acc_busi_fields",
+        "required": false,
+        "desc": "账户端业务信息域, 不同 account_type + trans_type 需要不同子字段 (见拉卡拉文档)"
+      },
+      {
+        "path": "req_data.out_order_no",
+        "required": false,
+        "desc": "外部订单号"
+      },
+      {
+        "path": "req_data.pnr_ins_id_cd",
+        "required": false,
+        "desc": "银联服务商机构标识码"
+      },
+      {
+        "path": "req_data.qb_amount",
+        "required": false,
+        "desc": "区补优惠金额 (分)"
+      },
+      {
+        "path": "req_data.gb_amount",
+        "required": false,
+        "desc": "国补优惠金额 (分)"
+      }
     ],
     "example": {
-      "req_time": "{{req_time}}", "version": "3.0",
+      "req_time": "{{req_time}}",
+      "version": "3.0",
       "req_data": {
-        "merchant_no": "82229007392000A", "term_no": "D9296400",
-        "out_trade_no": "{{out_trade_no}}", "account_type": "ALIPAY",
-        "trans_type": "41", "total_amount": 1,
+        "merchant_no": "82229007392000A",
+        "term_no": "D9296400",
+        "out_trade_no": "{{out_trade_no}}",
+        "account_type": "ALIPAY",
+        "trans_type": "41",
+        "total_amount": "1",
         "notify_url": "http://example.com/notify",
-        "location_info": { "request_ip": "192.168.1.1", "location": "+23.137208/+113.381982" },
+        "location_info": {
+          "request_ip": "192.168.1.1",
+          "location": "+23.137208/+113.381982"
+        },
         "subject": "测试订单"
+      }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "out_trade_no": "TEST123456789",
+        "trade_no": "2024062666210315450047",
+        "log_no": "66210315450047",
+        "acc_resp_fields": {
+          "code": "https://qr.alipay.com/...",
+          "code_image": ""
+        }
+      }
+    }
+  },
+  "aggregate_passive_scan": {
+    "id": "aggregate_passive_scan",
+    "category": "支付交易类接口",
+    "name": "聚合被扫 (商户扫用户码)",
+    "description": "聚合支付 - 被扫场景: 商户终端扫用户 App 里的付款码 (条形码/二维码) 完成支付. 支持微信(10-15开头)/支付宝(25-30开头)/银联(62开头)/数币(01开头)/翼支付(51开头)/苏宁(83开头). 请求/响应明文 JSON, 仅加签/验签.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/micropay",
+    "url_prod": "https://s2.lakala.com/api/v3/labs/trans/micropay",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "out_org_code",
+        "required": false,
+        "desc": "组织代码"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": true,
+        "desc": "终端号"
+      },
+      {
+        "path": "req_data.out_trade_no",
+        "required": true,
+        "desc": "商户交易流水号, 不可重复"
+      },
+      {
+        "path": "req_data.auth_code",
+        "required": true,
+        "desc": "支付授权码 (设备读取用户 App 里的付款码), 不同账户类型前缀不同"
+      },
+      {
+        "path": "req_data.total_amount",
+        "required": true,
+        "desc": "金额, 单位: 分"
+      },
+      {
+        "path": "req_data.location_info",
+        "required": true,
+        "desc": "地址位置信息"
+      },
+      {
+        "path": "req_data.location_info.request_ip",
+        "required": true,
+        "desc": "请求方 IP"
+      },
+      {
+        "path": "req_data.busi_mode",
+        "required": false,
+        "desc": "业务模式: ACQ-收单"
+      },
+      {
+        "path": "req_data.subject",
+        "required": false,
+        "desc": "订单标题"
+      },
+      {
+        "path": "req_data.pay_order_no",
+        "required": false,
+        "desc": "拉卡拉支付业务订单号"
+      },
+      {
+        "path": "req_data.notify_url",
+        "required": false,
+        "desc": "商户通知地址"
+      },
+      {
+        "path": "req_data.settle_type",
+        "required": false,
+        "desc": "结算类型: 0 或空=常规"
+      },
+      {
+        "path": "req_data.scan_type",
+        "required": false,
+        "desc": "扫码类型: 0=普通扫码 1=微信刷脸 3=押金支付..."
+      },
+      {
+        "path": "req_data.acc_busi_fields",
+        "required": false,
+        "desc": "账户端业务信息域 (按 auth_code 类型填)"
+      },
+      {
+        "path": "req_data.out_order_no",
+        "required": false,
+        "desc": "外部订单号"
+      },
+      {
+        "path": "req_data.term_info",
+        "required": false,
+        "desc": "终端信息 (加密因子/密文数据)"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_data": {
+        "merchant_no": "82229007392000A",
+        "term_no": "29834765",
+        "out_trade_no": "{{out_trade_no}}",
+        "auth_code": "135178236713755638",
+        "total_amount": "123",
+        "location_info": {
+          "request_ip": "192.168.1.1"
+        },
+        "notify_url": "http://example.com/notify",
+        "subject": "测试订单"
+      }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E",
+        "account_type": "WECHAT",
+        "total_amount": "123",
+        "trade_state": "SUCCESS"
+      }
+    }
+  },
+  "aggregate_trans_query": {
+    "id": "aggregate_trans_query",
+    "category": "支付交易类接口",
+    "name": "聚合交易查询",
+    "description": "查询主扫/被扫交易状态. 返回 code=BBS00000 仅表示查到了这笔交易, 交易实际成功与否要看响应里的 trade_state 字段 (SUCCESS / FAIL / DEAL / PART_REFUND ...). out_trade_no / trade_no 二选一, 优先级: trade_no > out_trade_no. 请求/响应明文 JSON.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/query/tradequery",
+    "url_prod": "https://s2.lakala.com/api/v3/labs/query/tradequery",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "out_org_code",
+        "required": false,
+        "desc": "组织代码"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": true,
+        "desc": "终端号"
+      },
+      {
+        "path": "req_data.out_trade_no",
+        "required": false,
+        "desc": "商户交易流水号 (与 trade_no 二选一)"
+      },
+      {
+        "path": "req_data.trade_no",
+        "required": false,
+        "desc": "拉卡拉交易流水号 (与 out_trade_no 二选一)"
+      },
+      {
+        "path": "req_data.trade_req_date",
+        "required": false,
+        "desc": "交易请求日期 yyyyMMdd, 上送原商户交易流水号时必填"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "out_org_code": "OP00000003",
+      "req_data": {
+        "merchant_no": "82229007392000A",
+        "term_no": "29834765",
+        "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E"
+      }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "out_trade_no": "FD000E1F-AA3A4476-933CDEDAE1EC1D8E",
+        "trade_no": "2024062600210683600877",
+        "log_no": "00210683600877",
+        "trade_state": "SUCCESS",
+        "trade_state_desc": "交易成功",
+        "account_type": "WECHAT",
+        "total_amount": "123",
+        "payer_amount": "123",
+        "trade_time": "20240626155827"
+      }
+    }
+  },
+  "cashier_create": {
+    "id": "cashier_create",
+    "category": "支付交易类接口",
+    "name": "收银台订单创建",
+    "description": "创建收银台订单, 返回 counter_url 让客户跳转到拉卡拉收银台页面完成支付. 支持多种支付方式聚合展示 (微信/支付宝/银联/数币/花呗/京东白条等). 请求/响应明文 JSON, 仅加签.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/create",
+    "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/create",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "req_data.out_order_no",
+        "required": true,
+        "desc": "商户订单号"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号"
+      },
+      {
+        "path": "req_data.total_amount",
+        "required": true,
+        "desc": "订单金额, 单位: 分"
+      },
+      {
+        "path": "req_data.order_efficient_time",
+        "required": true,
+        "desc": "订单有效期 yyyyMMddHHmmss, 最大下单时间 +2 天"
+      },
+      {
+        "path": "req_data.order_info",
+        "required": true,
+        "desc": "订单标题 (账户端使用, 不支持 emoji)"
+      },
+      {
+        "path": "req_data.vpos_id",
+        "required": false,
+        "desc": "交易设备标识 (非合单场景必传, 取进件接口返回的 termId)"
+      },
+      {
+        "path": "req_data.channel_id",
+        "required": false,
+        "desc": "渠道号"
+      },
+      {
+        "path": "req_data.busi_mode",
+        "required": false,
+        "desc": "业务模式: ACQ-收单 (默认)"
+      },
+      {
+        "path": "req_data.notify_url",
+        "required": false,
+        "desc": "订单支付成功后商户接收通知地址"
+      },
+      {
+        "path": "req_data.support_cancel",
+        "required": false,
+        "desc": "是否支持撤销 0/1, 默认 0"
+      },
+      {
+        "path": "req_data.support_refund",
+        "required": false,
+        "desc": "是否支持退款 0/1, 默认 0"
+      },
+      {
+        "path": "req_data.support_repeat_pay",
+        "required": false,
+        "desc": "是否支持多次发起支付 0/1, 默认 0"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": false,
+        "desc": "结算终端号 (合单场景必传)"
+      },
+      {
+        "path": "req_data.split_mark",
+        "required": false,
+        "desc": "合单标识: 1=合单, 默认不填"
+      },
+      {
+        "path": "req_data.settle_type",
+        "required": false,
+        "desc": "结算类型 (非合单): 0 或空=常规"
+      },
+      {
+        "path": "req_data.out_split_info",
+        "required": false,
+        "desc": "拆单信息列表 (split_mark=1 时必传)"
+      },
+      {
+        "path": "req_data.counter_param",
+        "required": false,
+        "desc": "收银台展示参数 (JSON 字符串)"
+      },
+      {
+        "path": "req_data.counter_remark",
+        "required": false,
+        "desc": "收银台备注 (不支持 emoji)"
+      },
+      {
+        "path": "req_data.busi_type_param",
+        "required": false,
+        "desc": "业务类型控制参数 (JSON 字符串)"
+      },
+      {
+        "path": "req_data.callback_url",
+        "required": false,
+        "desc": "客户端支付完成后返回的商户地址"
+      },
+      {
+        "path": "req_data.out_user_id",
+        "required": false,
+        "desc": "发起订单方 userId"
+      },
+      {
+        "path": "req_data.product_id",
+        "required": false,
+        "desc": "指定产品编号 (如 000009 线上外卡)"
+      },
+      {
+        "path": "req_data.shop_name",
+        "required": false,
+        "desc": "网点名称"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_data": {
+        "out_order_no": "{{out_trade_no}}",
+        "merchant_no": "82229007392000A",
+        "vpos_id": "587365941625155584",
+        "total_amount": "1",
+        "busi_mode": "ACQ",
+        "order_efficient_time": "20260714170000",
+        "notify_url": "http://example.com/notify",
+        "support_cancel": "0",
+        "support_refund": "1",
+        "support_repeat_pay": "1",
+        "order_info": "测试订单"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "操作成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "channel_id": "25",
+        "out_order_no": "KFPT...",
+        "order_create_time": "20240626155843",
+        "order_efficient_time": "20240628170000",
+        "pay_order_no": "21692211012001976631006488656",
+        "counter_url": "http://q.huijingcai.top/b/pay?merchantNo=...&payOrderNo=..."
+      }
+    }
+  },
+  "cashier_query": {
+    "id": "cashier_query",
+    "category": "支付交易类接口",
+    "name": "收银台订单查询",
+    "description": "查询收银台订单状态. out_order_no + merchant_no 或 pay_order_no + merchant_no 二选一. 如果创建时传了 channel_id, 查询时也必须传同一个 channel_id. 返回订单状态 + 所有子交易明细 (合单场景).",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/query",
+    "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/query",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号"
+      },
+      {
+        "path": "req_data.out_order_no",
+        "required": false,
+        "desc": "商户订单号 (与 pay_order_no 二选一)"
+      },
+      {
+        "path": "req_data.pay_order_no",
+        "required": false,
+        "desc": "支付订单号 (与 out_order_no 二选一)"
+      },
+      {
+        "path": "req_data.channel_id",
+        "required": false,
+        "desc": "渠道号 (创建时传了就要传)"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_data": {
+        "pay_order_no": "21692211012001976631006488642",
+        "merchant_no": "82216061412000G",
+        "channel_id": "15"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "操作成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "pay_order_no": "21692211012001976631006488642",
+        "out_order_no": "LABS1632300253YDMG",
+        "channel_id": "15",
+        "merchant_no": "82216295947000G",
+        "order_status": "2",
+        "total_amount": 3300,
+        "order_create_time": "20240619164413",
+        "order_trade_info_list": [
+          {
+            "trade_no": "20216922512100000010",
+            "log_No": "51200283000010",
+            "trade_status": "2",
+            "trade_amount": 3300,
+            "busi_type": "SCPAY"
+          }
+        ]
+      }
+    }
+  },
+  "cashier_close": {
+    "id": "cashier_close",
+    "category": "支付交易类接口",
+    "name": "收银台关单",
+    "description": "关闭收银台订单, 防止用户继续支付. out_order_no 或 pay_order_no 二选一. 返回 order_status: 0=待支付/1=支付中/2=支付成功/3=支付失败/4=已过期/5=已取消/6=部分或全部退款/7=已关单.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/close",
+    "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/close",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "out_org_code",
+        "required": false,
+        "desc": "组织代码"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号"
+      },
+      {
+        "path": "req_data.out_order_no",
+        "required": false,
+        "desc": "商户订单号 (与 pay_order_no 二选一)"
+      },
+      {
+        "path": "req_data.pay_order_no",
+        "required": false,
+        "desc": "支付订单号 (与 out_order_no 二选一)"
+      },
+      {
+        "path": "req_data.channel_id",
+        "required": false,
+        "desc": "渠道号"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "out_org_code": "OP00000003",
+      "req_data": {
+        "out_order_no": "KFPT{{out_trade_no}}",
+        "merchant_no": "82229007392000A"
+      }
+    },
+    "response_example": {
+      "code": "000000",
+      "msg": "操作成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "order_status": "7",
+        "pay_order_no": "21071411012001976631000020310",
+        "out_order_no": "KFPT...",
+        "channel_id": "20210526143010"
+      }
+    }
+  },
+  "refund": {
+    "id": "refund",
+    "category": "支付交易类接口",
+    "name": "统一退货 (前置退货系统)",
+    "description": "对原交易做退货. 原交易必须是已成功状态. 通过 origin_log_no / origin_out_trade_no / origin_trade_no 任一定位原交易. 支持全额或部分退货. 异步处理, 调用后建议 30s 后再调用退货查询接口. 请求/响应明文 JSON.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/rfd/refund_front/refund",
+    "url_prod": "https://s2.lakala.com/api/v3/rfd/refund_front/refund",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号 (拉卡拉分配, 长度 15)"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": true,
+        "desc": "终端号 (拉卡拉分配, 长度 8)"
+      },
+      {
+        "path": "req_data.out_trade_no",
+        "required": true,
+        "desc": "商户请求流水号, 商户系统唯一, 此次退货操作的流水号 (不是原交易流水号)"
+      },
+      {
+        "path": "req_data.refund_amount",
+        "required": true,
+        "desc": "退款金额, 单位: 分, 正整数字符串"
+      },
+      {
+        "path": "req_data.location_info",
+        "required": true,
+        "desc": "地址位置信息"
+      },
+      {
+        "path": "req_data.location_info.request_ip",
+        "required": true,
+        "desc": "请求方 IP"
+      },
+      {
+        "path": "req_data.refund_reason",
+        "required": false,
+        "desc": "退货原因"
+      },
+      {
+        "path": "req_data.origin_log_no",
+        "required": false,
+        "desc": "原拉卡拉对账单流水号 (与 origin_out_trade_no / origin_trade_no 任一)"
+      },
+      {
+        "path": "req_data.origin_out_trade_no",
+        "required": false,
+        "desc": "原商户交易流水号"
+      },
+      {
+        "path": "req_data.origin_trade_no",
+        "required": false,
+        "desc": "原拉卡拉交易订单号"
+      },
+      {
+        "path": "req_data.refund_acc_mode",
+        "required": false,
+        "desc": "退货账户模式"
+      },
+      {
+        "path": "req_data.notify_url",
+        "required": false,
+        "desc": "后台通知地址 (退货成功后异步回调)"
+      },
+      {
+        "path": "req_data.refund_amt_sts",
+        "required": false,
+        "desc": "退货资金状态 (分账场景用)"
+      },
+      {
+        "path": "req_data.foreign_currency_type",
+        "required": false,
+        "desc": "外币币种 (外卡场景)"
+      },
+      {
+        "path": "req_data.foreign_currency_amount",
+        "required": false,
+        "desc": "外币金额"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_data": {
+        "merchant_no": "82229007392000A",
+        "term_no": "D9296400",
+        "out_trade_no": "{{out_trade_no}}",
+        "refund_amount": "1",
+        "refund_reason": "用户申请退款",
+        "origin_out_trade_no": "原交易商户流水号",
+        "location_info": {
+          "request_ip": "192.168.1.1"
+        },
+        "notify_url": "http://example.com/refund-notify"
+      }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "trade_state": "SUCCESS",
+        "refund_type": "PART",
+        "merchant_no": "82229007392000A",
+        "out_trade_no": "TEST123456",
+        "trade_no": "2024062600210683600877",
+        "log_no": "00210683600877",
+        "total_amount": "100",
+        "refund_amount": "1",
+        "payer_amount": "1",
+        "trade_time": "20240626155843"
+      }
+    }
+  },
+  "refund_query": {
+    "id": "refund_query",
+    "category": "支付交易类接口",
+    "name": "统一退货查询 (前置退货系统)",
+    "description": "退货请求收到响应后, 再发起退货查询. 对于退货超时的情况, 请 30s 后再发起查询. out_trade_no 或 trade_no 任一 (注意是退货流水号, 不是原交易流水号).",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v3/rfd/refund_front/refund_query",
+    "url_prod": "https://s2.lakala.com/api/v3/rfd/refund_front/refund_query",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "version",
+        "required": true,
+        "desc": "接口版本号 3.0"
+      },
+      {
+        "path": "req_time",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "req_data.merchant_no",
+        "required": true,
+        "desc": "商户号 (长度 15)"
+      },
+      {
+        "path": "req_data.term_no",
+        "required": true,
+        "desc": "终端号 (长度 8)"
+      },
+      {
+        "path": "req_data.out_trade_no",
+        "required": false,
+        "desc": "商户交易流水号 (退货时下单的流水号, 与 trade_no 任一)"
+      },
+      {
+        "path": "req_data.trade_no",
+        "required": false,
+        "desc": "拉卡拉交易流水号 (与 out_trade_no 任一)"
+      }
+    ],
+    "example": {
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_data": {
+        "merchant_no": "82229007392000A",
+        "term_no": "D9296400",
+        "out_trade_no": "{{out_trade_no}}"
+      }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20240626155843",
+      "resp_data": {
+        "merchant_no": "82229007392000A",
+        "out_trade_no": "TEST123456",
+        "trade_time": "20240626155843",
+        "trade_state": "SUCCESS",
+        "trade_no": "2024062600210683600877",
+        "log_no": "00210683600877",
+        "refund_amount": "1",
+        "refund_type": "PART"
       }
     }
   },
   "coupon_member_query": {
-    "id": "coupon_member_query", "category": "附加功能类接口",
+    "id": "coupon_member_query",
+    "category": "附加功能类接口",
     "name": "营销活动会员查询 (SM4 加密样例)",
-    "description": "示例接口，演示 SM4 整报文加密。req_data 字段在请求时整体 SM4 加密，响应的 resp_data 也是 SM4 加密。注意：URL 为占位，按您拿到的接口文档替换。",
+    "description": "示例接口，演示 SM4 整报文加密。req_data 字段在请求时整体 SM4 加密，响应的 resp_data 也是 SM4 加密。如果您接入的接口签名+加密对不上，可参照本示例查看预期格式。注意：URL 为占位，按您拿到的接口文档替换。",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/coupon/activity/member/query",
     "url_prod": "https://s2.lakala.com/api/v3/labs/coupon/activity/member/query",
     "doc_url": "https://o.lakala.com",
     "encrypt": {
-      "request":  { "mode": "all", "path": "req_data" },
-      "response": { "mode": "all", "path": "resp_data" }
+      "request": {
+        "mode": "all",
+        "path": "req_data"
+      },
+      "response": {
+        "mode": "all",
+        "path": "resp_data"
+      }
     },
     "fields": [
-      { "path": "version",  "type": "string", "required": true,  "desc": "接口版本号，固定 3.0" },
-      { "path": "req_time", "type": "string", "required": true,  "desc": "请求时间，yyyyMMddHHmmss (工具自动填)" },
-      { "path": "req_id",   "type": "string", "required": true,  "desc": "请求流水号 (工具自动填)" },
-      { "path": "req_data", "type": "object", "required": true,  "desc": "业务参数对象 — 整体会被 SM4 加密成 Base64 字符串后再发送" },
-      { "path": "req_data.member_id",     "type": "string", "required": true,  "desc": "会员 ID" },
-      { "path": "req_data.activity_id",   "type": "string", "required": true,  "desc": "活动 ID" },
-      { "path": "req_data.owner_id",      "type": "string", "required": false, "desc": "归属方 ID" },
-      { "path": "req_data.promotion_id",  "type": "string", "required": false, "desc": "营销活动 ID" },
-      { "path": "req_data.channel_mchid", "type": "string", "required": false, "desc": "渠道商户号" },
-      { "path": "req_data.channel_appid", "type": "string", "required": false, "desc": "渠道 AppID" },
-      { "path": "req_data.channel_openid","type": "string", "required": false, "desc": "渠道用户 OpenID" },
-      { "path": "req_data.mer_order_id",  "type": "string", "required": false, "desc": "商户订单号" }
-    ],
-    "example": {
-      "req_time": "{{req_time}}", "version": "3.0", "req_id": "{{out_trade_no}}",
-      "req_data": {
-        "member_id": "AAA200154561278", "activity_id": "1100000086",
-        "owner_id": "80000007", "promotion_id": "FE8D9673C7AD41CBAD2F79DE219F80E0",
-        "channel_mchid": "1610278380", "channel_appid": "wx4654656c083983e6",
-        "channel_openid": "oKL-mwRzR-SBfI4QDAI1QXOpkyc8", "mer_order_id": "{{out_trade_no}}"
+      {
+        "path": "version",
+        "type": "string",
+        "required": true,
+        "desc": "接口版本号，固定 3.0"
+      },
+      {
+        "path": "req_time",
+        "type": "string",
+        "required": true,
+        "desc": "请求时间，yyyyMMddHHmmss (工具自动填)"
+      },
+      {
+        "path": "req_id",
+        "type": "string",
+        "required": true,
+        "desc": "请求流水号 (工具自动填)"
+      },
+      {
+        "path": "req_data",
+        "type": "object",
+        "required": true,
+        "desc": "业务参数对象 — 整体会被 SM4 加密成 Base64 字符串后再发送"
+      },
+      {
+        "path": "req_data.member_id",
+        "type": "string",
+        "required": true,
+        "desc": "会员 ID"
+      },
+      {
+        "path": "req_data.activity_id",
+        "type": "string",
+        "required": true,
+        "desc": "活动 ID"
+      },
+      {
+        "path": "req_data.owner_id",
+        "type": "string",
+        "required": false,
+        "desc": "归属方 ID"
+      },
+      {
+        "path": "req_data.promotion_id",
+        "type": "string",
+        "required": false,
+        "desc": "营销活动 ID"
+      },
+      {
+        "path": "req_data.channel_mchid",
+        "type": "string",
+        "required": false,
+        "desc": "渠道商户号"
+      },
+      {
+        "path": "req_data.channel_appid",
+        "type": "string",
+        "required": false,
+        "desc": "渠道 AppID"
+      },
+      {
+        "path": "req_data.channel_openid",
+        "type": "string",
+        "required": false,
+        "desc": "渠道用户 OpenID"
+      },
+      {
+        "path": "req_data.mer_order_id",
+        "type": "string",
+        "required": false,
+        "desc": "商户订单号"
       }
-    }
-  },
-  "merchant_register": {
-    "id": "merchant_register", "category": "开户进件类接口", "name": "新增进件",
-    "description": "拓客 SAAS 新增进件接口。整体报文 SM4 加密：HTTP 请求 body 是一段 base64 密文（不是 JSON），响应 body 也是 base64 密文；签名对密文做。",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/merchant_encry",
-    "url_prod": "https://s2.lakala.com/api/v3/tkbs/merchant_encry",
-    "encrypt": { "request": { "mode": "whole" }, "response": { "mode": "whole" } },
-    "fields": [
-      { "path": "ver", "required": true, "desc": "接口版本号，1.0" },
-      { "path": "timestamp", "required": true, "desc": "毫秒级时间戳字符串" },
-      { "path": "req_id", "required": true, "desc": "请求流水号" },
-      { "path": "req_data", "required": true, "desc": "进件业务数据 — 整个 body 一起加密" },
-      { "path": "req_data.org_code", "required": true, "desc": "组织代码" },
-      { "path": "req_data.user_no", "required": true, "desc": "代理商业务员编号" },
-      { "path": "req_data.source", "required": true, "desc": "进件来源" },
-      { "path": "req_data.mer_type", "required": true, "desc": "商户类型 TP_PERSONAL/TP_ENTERPRISE" },
-      { "path": "req_data.mer_name", "required": true, "desc": "商户名称" },
-      { "path": "req_data.busi_code", "required": true, "desc": "业务类型 WECHAT_PAY 等" },
-      { "path": "req_data.contact_mobile", "required": true, "desc": "联系手机号" },
-      { "path": "req_data.lar_id_card", "required": true, "desc": "法人证件号" },
-      { "path": "req_data.account_no", "required": true, "desc": "结算账号" },
-      { "path": "req_data.openning_bank_code", "required": true, "desc": "开户行联行号" },
-      { "path": "req_data.attchments", "required": true, "desc": "附件清单 [{id, type}], 通过文件上传接口取得" },
-      { "path": "req_data.biz_content.fees", "required": true, "desc": "费率清单" },
-      { "path": "req_data.biz_content.mcc", "required": true, "desc": "MCC 行业码" }
     ],
     "example": {
-      "ver": "1.0", "timestamp": "{{timestamp_ms}}", "req_id": "{{req_id}}",
+      "req_time": "{{req_time}}",
+      "version": "3.0",
+      "req_id": "{{out_trade_no}}",
       "req_data": {
-        "org_code": "200028", "lar_id_type": "01",
-        "attchments": [
-          {"id":"merchant/null/20231227172245221010CHECKSTAND_IMG.png","type":"CHECKSTAND_IMG"},
-          {"id":"merchant/null/20231227172251776083SHOP_OUTSIDE_IMG.png","type":"SHOP_OUTSIDE_IMG"}
-        ],
-        "license_no": "92450202MA5MWYQK23", "account_name": "徐丽", "city_code": "6140",
-        "user_no": "20000101", "latitude": "114.034257",
-        "biz_content": {
-          "activity_id": "37",
-          "fees": [
-            {"fee_code":"WECHAT","fee_value":"0.60"},
-            {"fee_code":"ALIPAY","fee_value":"0.60"},
-            {"fee_code":"SCAN_PAY","fee_value":"0.60"},
-            {"top_fee":"20","fee_code":"DEBIT_CARD","fee_value":"0.38"},
-            {"fee_code":"CREDIT_CARD","fee_value":"0.6"},
-            {"top_fee":"20","fee_code":"UNIONPAY_WALLET_DEBIT_FEE","fee_value":"0.38"},
-            {"fee_code":"UNIONPAY_WALLET_CREDIT_FEE","fee_value":"0.6"}
-          ],
-          "mcc": "11002", "term_num": "1"
-        },
-        "mer_name": "转发进件测试",
-        "openning_bank_name": "中国农业银行广西柳州市柳南支行营业室",
-        "settle_city_name": "柳州市", "source": "H5", "license_dt_end": "9999-12-31",
-        "settle_province_code": "45", "longtude": "22.663572",
-        "account_no": "6228480850854176714", "lar_name": "徐哈哈",
-        "lar_id_card_start": "2015-01-16", "email": "2804711849@qq.com",
-        "openning_bank_code": "103614010818", "contact_mobile": "18276770550",
-        "account_id_dt_start": "2015-01-16", "lar_id_card": "460027200111297612",
-        "settle_city_code": "6140", "province_code": "6100", "contact_name": "徐哈哈",
-        "busi_code": "WECHAT_PAY", "account_type": "58", "license_name": "烟酒行批发24小时",
-        "mer_addr": "柳州市解放南路金鱼巷1号花旗壹号楼15-10",
-        "license_dt_start": "2017-11-21", "lar_id_card_end": "2035-01-16",
-        "county_code": "986140", "account_id_dt_end": "2035-01-16",
-        "mer_reg_name": "转发进件测试", "account_id_card": "460027200111297612",
-        "settle_province_name": "广西", "mer_type": "TP_PERSONAL",
-        "clearing_bank_code": "103100000026",
-        "business_content": "烟酒行批发24小时", "settle_type": "D1"
+        "member_id": "AAA200154561278",
+        "activity_id": "1100000086",
+        "owner_id": "80000007",
+        "promotion_id": "FE8D9673C7AD41CBAD2F79DE219F80E0",
+        "channel_mchid": "1610278380",
+        "channel_appid": "wx4654656c083983e6",
+        "channel_openid": "oKL-mwRzR-SBfI4QDAI1QXOpkyc8",
+        "mer_order_id": "{{out_trade_no}}"
       }
-    }
-  },
-  "file_upload": {
-    "id": "file_upload", "category": "开户进件类接口", "name": "文件上传",
-    "description": "进件附件上传接口。请求/响应明文 JSON, 不加密。file_base64 用 data URL 格式。返回的 url 用作进件 attchments[].id。",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/customer/file/upload",
-    "url_prod": "https://s2.lakala.com/api/v3/tkbs/customer/file/upload",
-    "fields": [
-      { "path": "ver", "required": true, "desc": "版本号 1.0.0" },
-      { "path": "timestamp", "required": true, "desc": "秒级时间戳" },
-      { "path": "req_data.file_base64", "required": true, "desc": "图片 Data URL: data:image/png;base64,xxx" },
-      { "path": "req_data.img_type", "required": true, "desc": "图片类型 SHOP_INSIDE_IMG/SHOP_OUTSIDE_IMG/CHECKSTAND_IMG/LICENSE_IMG/ID_CARD_FRONT 等" },
-      { "path": "req_data.sourcechnl", "required": false, "desc": "来源渠道, 默认 0" },
-      { "path": "req_data.is_ocr", "required": false, "desc": "是否 OCR true/false" }
-    ],
-    "example": {
-      "ver": "1.0.0", "timestamp": "{{timestamp}}",
-      "req_data": {
-        "file_base64": "data:image/png;base64,REPLACE_WITH_BASE64_DATA_URL",
-        "img_type": "SHOP_INSIDE_IMG", "sourcechnl": "0", "is_ocr": "false"
-      }
-    }
-  },
-  "open_merchant_info": {
-    "id": "open_merchant_info", "category": "开户进件类接口", "name": "商户信息查询",
-    "description": "根据商户号或客户号查询商户信息（含结算卡、店铺、终端、费率、商户基本信息）。请求/响应均明文 JSON, 不加密。merchant_no 和 customer_no 二选一。",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v3/tkbs/open_merchant_info",
-    "url_prod": "https://s2.lakala.com/api/v3/tkbs/open_merchant_info",
-    "fields": [
-      { "path": "ver", "required": true, "desc": "版本号 1.0" },
-      { "path": "timestamp", "required": true, "desc": "毫秒级时间戳字符串" },
-      { "path": "req_id", "required": true, "desc": "请求流水号" },
-      { "path": "req_data.merchant_no", "required": false, "desc": "商户号 (与 customer_no 二选一)" },
-      { "path": "req_data.customer_no", "required": false, "desc": "客户号 (与 merchant_no 二选一)" },
-      { "path": "req_data.org_code", "required": true, "desc": "组织代码" }
-    ],
-    "example": {
-      "ver": "1.0", "timestamp": "{{timestamp_ms}}", "req_id": "{{req_id}}",
-      "req_data": { "merchant_no": "", "customer_no": "100138867", "org_code": "200028" }
+    },
+    "response_example": {
+      "code": "BBS00000",
+      "msg": "成功",
+      "resp_time": "20211207145024",
+      "resp_data": "<SM4 加密的 Base64 字符串，解密后是真正的 JSON 对象>"
     }
   }
 };

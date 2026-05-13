@@ -1,0 +1,40 @@
+{
+  "id": "cashier_close",
+  "category": "支付交易类接口",
+  "name": "收银台关单",
+  "description": "关闭收银台订单, 防止用户继续支付. out_order_no 或 pay_order_no 二选一. 返回 order_status: 0=待支付/1=支付中/2=支付成功/3=支付失败/4=已过期/5=已取消/6=部分或全部退款/7=已关单.",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/ccss/counter/order/close",
+  "url_prod": "https://s2.lakala.com/api/v3/ccss/counter/order/close",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",               "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "out_org_code",           "required": false, "desc": "组织代码" },
+    { "path": "req_data.merchant_no",   "required": true,  "desc": "商户号" },
+    { "path": "req_data.out_order_no",  "required": false, "desc": "商户订单号 (与 pay_order_no 二选一)" },
+    { "path": "req_data.pay_order_no",  "required": false, "desc": "支付订单号 (与 out_order_no 二选一)" },
+    { "path": "req_data.channel_id",    "required": false, "desc": "渠道号" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "out_org_code": "OP00000003",
+    "req_data": {
+      "out_order_no": "KFPT{{out_trade_no}}",
+      "merchant_no": "82229007392000A"
+    }
+  },
+  "response_example": {
+    "code": "000000",
+    "msg": "操作成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "order_status": "7",
+      "pay_order_no": "21071411012001976631000020310",
+      "out_order_no": "KFPT...",
+      "channel_id": "20210526143010"
+    }
+  }
+}

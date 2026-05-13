@@ -1,0 +1,42 @@
+{
+  "id": "refund_query",
+  "category": "支付交易类接口",
+  "name": "统一退货查询 (前置退货系统)",
+  "description": "退货请求收到响应后, 再发起退货查询. 对于退货超时的情况, 请 30s 后再发起查询. out_trade_no 或 trade_no 任一 (注意是退货流水号, 不是原交易流水号).",
+  "method": "POST",
+  "url_test": "https://test.wsmsd.cn/sit/api/v3/rfd/refund_front/refund_query",
+  "url_prod": "https://s2.lakala.com/api/v3/rfd/refund_front/refund_query",
+  "doc_url": "https://o.lakala.com/#/home/document/detail",
+  "fields": [
+    { "path": "version",                "required": true,  "desc": "接口版本号 3.0" },
+    { "path": "req_time",               "required": true,  "desc": "请求时间 yyyyMMddHHmmss" },
+    { "path": "req_data.merchant_no",   "required": true,  "desc": "商户号 (长度 15)" },
+    { "path": "req_data.term_no",       "required": true,  "desc": "终端号 (长度 8)" },
+    { "path": "req_data.out_trade_no",  "required": false, "desc": "商户交易流水号 (退货时下单的流水号, 与 trade_no 任一)" },
+    { "path": "req_data.trade_no",      "required": false, "desc": "拉卡拉交易流水号 (与 out_trade_no 任一)" }
+  ],
+  "example": {
+    "req_time": "{{req_time}}",
+    "version": "3.0",
+    "req_data": {
+      "merchant_no": "82229007392000A",
+      "term_no": "D9296400",
+      "out_trade_no": "{{out_trade_no}}"
+    }
+  },
+  "response_example": {
+    "code": "BBS00000",
+    "msg": "成功",
+    "resp_time": "20240626155843",
+    "resp_data": {
+      "merchant_no": "82229007392000A",
+      "out_trade_no": "TEST123456",
+      "trade_time": "20240626155843",
+      "trade_state": "SUCCESS",
+      "trade_no": "2024062600210683600877",
+      "log_no": "00210683600877",
+      "refund_amount": "1",
+      "refund_type": "PART"
+    }
+  }
+}
