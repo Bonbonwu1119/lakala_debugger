@@ -314,6 +314,16 @@
   <div class="header-meta">SHA256withRSA · 加签 / 验签 · SM4 加解密 · 接口示例 + 一键发送</div>
 </header>
 
+<!-- 网页版境外 IP 提醒 (本地运行 exe 时自动隐藏) -->
+<div id="webBanner" class="alert alert-warn" style="display: none; margin-bottom: 14px;">
+  <strong>📢 网页版功能限制</strong><br>
+  当前网页部署在境外服务器, "<strong>发送请求</strong>" 功能受拉卡拉测试网关对境外 IP 的限制, 可能被网关拒绝.
+  <strong>建议下载本地单机版</strong>, 在您电脑直接运行, 请求从您本机国内 IP 出, 不受限.
+  <br>
+  <a href="https://github.com/Bonbonwu1119/lakala_debugger/releases/latest" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 14px; background:var(--accent); color:var(--bg); border-radius:6px; font-weight:700; text-decoration:none;">📥 下载单机版 (Windows / Mac)</a>
+  <span style="color:var(--ink-soft); font-size:12px; margin-left:8px;">浏览接口 / 签名诊断 / SM4 加解密 / 验签 等功能, 网页版都正常可用</span>
+</div>
+
 <!-- 顶部工具栏: 环境切换 + 验签公钥证书入口 -->
 <div class="toolbar">
   <div class="toolbar-item env-active" id="envBox">
@@ -4460,6 +4470,12 @@ function fillSm4DocSample() {
 $('verifyCert').value = LKL_PUB_CERT_TEST;
 loadProdCertFromStorage();
 updateToolbarCertStatus();
+// 网页部署时显示境外 IP 横幅 (localhost / 127.0.0.1 / file:// 时不显示)
+const host = location.hostname;
+if (host && host !== 'localhost' && host !== '127.0.0.1' && location.protocol !== 'file:') {
+  const b = $('webBanner');
+  if (b) b.style.display = '';
+}
 loadSchemas();
 </script>
 </body>

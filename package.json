@@ -1,6 +1,6 @@
 {
   "name": "lakala-debugger",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "拉卡拉接口调试工具 - 加签/验签/SM4 加解密/参数诊断",
   "main": "server.js",
   "bin": "server.js",
