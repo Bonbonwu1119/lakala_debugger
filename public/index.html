@@ -124,6 +124,12 @@
   .field-doc h3 { margin: 0 0 8px; font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .8px; font-family: "JetBrains Mono", monospace; }
   .field-item { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
   .field-item:last-child { border: 0; }
+  .field-group-title {
+    font-family: "Noto Serif SC", serif; font-size: 12px; font-weight: 700;
+    color: var(--accent); margin: 16px 0 8px; padding-bottom: 4px;
+    border-bottom: 1px solid var(--line-strong); letter-spacing: 0.3px;
+  }
+  .field-group-title:first-child { margin-top: 0; }
   .field-path { font-family: "JetBrains Mono", monospace; font-weight: 500; color: var(--accent-dark); font-size: 12px; }
   .field-req { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 2px; margin-left: 4px; vertical-align: middle; }
   .field-req.yes { background: var(--accent); color: white; }
@@ -3350,12 +3356,29 @@ function selectInterface(id) {
   $('ifaceDesc').textContent = CURRENT_SCHEMA.description || '';
   $('ifaceUrl').textContent = currentUrl();
 
-  // 渲染字段说明
+  // 渲染字段说明: 按"公共参数 (顶层) / 业务参数 (req_data 或 reqData)"分组,
+  // 业务参数下的字段去掉 req_data. / reqData. 前缀, 跟拉卡拉官方文档显示一致
   const enc = CURRENT_SCHEMA.encrypt || {};
   const reqEncFields = (enc.request && enc.request.mode === 'fields') ? new Set(enc.request.fields || []) : new Set();
   const reqEncAllPath = (enc.request && enc.request.mode === 'all') ? (enc.request.path || 'req_data') : null;
-  const fdb = $('fieldDocBody');
-  fdb.innerHTML = (CURRENT_SCHEMA.fields || []).map(f => {
+
+  const allFields = CURRENT_SCHEMA.fields || [];
+  // 探测业务字段根 (req_data 或 reqData)
+  let bizRoot = null;
+  for (const f of allFields) {
+    if (f.path.startsWith('req_data.') || f.path === 'req_data') { bizRoot = 'req_data'; break; }
+    if (f.path.startsWith('reqData.')  || f.path === 'reqData')  { bizRoot = 'reqData';  break; }
+  }
+  const topFields = [], bizFields = [];
+  for (const f of allFields) {
+    if (bizRoot && (f.path === bizRoot || f.path.startsWith(bizRoot + '.'))) {
+      const display = (f.path === bizRoot) ? `(${bizRoot} 整个对象)` : f.path.slice(bizRoot.length + 1);
+      bizFields.push({ ...f, displayPath: display });
+    } else {
+      topFields.push({ ...f, displayPath: f.path });
+    }
+  }
+  function renderOneField(f) {
     const isEncField = reqEncFields.has(f.path);
     const isEncWhole = reqEncAllPath && (f.path === reqEncAllPath || f.path.startsWith(reqEncAllPath + '.'));
     const encBadge = (isEncField || isEncWhole)
@@ -3363,12 +3386,22 @@ function selectInterface(id) {
       : '';
     return `
     <div class="field-item">
-      <span class="field-path">${escapeHtml(f.path)}</span>
+      <span class="field-path">${escapeHtml(f.displayPath)}</span>
       <span class="field-req ${f.required?'yes':'no'}">${f.required?'必传':'选填'}</span>
       ${encBadge}
       <div class="field-desc">${escapeHtml(f.desc || '')}</div>
     </div>`;
-  }).join('') || '该接口暂无字段说明';
+  }
+  let fieldHtml = '';
+  if (topFields.length) {
+    fieldHtml += '<div class="field-group-title">公共参数 (顶层)</div>';
+    fieldHtml += topFields.map(renderOneField).join('');
+  }
+  if (bizFields.length) {
+    fieldHtml += `<div class="field-group-title">业务参数 (${bizRoot})</div>`;
+    fieldHtml += bizFields.map(renderOneField).join('');
+  }
+  $('fieldDocBody').innerHTML = fieldHtml || '该接口暂无字段说明';
 
   loadExampleBody();
   renderSm4Hint();
