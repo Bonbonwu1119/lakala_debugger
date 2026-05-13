@@ -1356,8 +1356,8 @@ const INLINE_SCHEMAS = {
   "aggregate_active_scan": {
     "id": "aggregate_active_scan",
     "category": "支付交易类接口",
-    "name": "聚合主扫 (用户扫商户码)",
-    "description": "聚合支付 - 主扫场景：用户用 App 扫商户的码，发起支付。支持支付宝/微信/银联/数字人民币/翼支付/苏宁等。返回二维码或预下单 ID 给商户去拉起支付。请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签。",
+    "name": "聚合主扫",
+    "description": "聚合主扫接口, 按 trans_type 区分三种主流场景:\n\n  • trans_type=41 (NATIVE 扫码): account_type 只支持 ALIPAY 或 UQRCODEPAY (云闪付). 响应 resp_data.code 是一段 URL, 客户端把 URL 转成二维码让用户用对应 App 扫码完成支付.\n\n  • trans_type=51 (JSAPI): 支持微信公众号 / 支付宝生活号 / 支付宝 H5 应用 / 支付宝小程序 / 银联 JS. 传相应的 acc_busi_fields 域后, 可以直接在微信/支付宝/云闪付 App 内完成支付 (JSAPI 跳起). 微信场景比支付宝常用, 云闪付少见.\n\n  • trans_type=71 (微信小程序, 最常用): 仅支持微信小程序内支付. 传 acc_busi_fields 后在小程序内拉起.\n\n请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/preorder",
     "url_prod": "https://s2.lakala.com/api/v3/labs/trans/preorder",
@@ -1396,17 +1396,17 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.account_type",
         "required": true,
-        "desc": "钱包类型: WECHAT/ALIPAY/UQRCODEPAY(银联)/DCPAY(数币)/BESTPAY(翼支付)/SUNING(苏宁) ..."
+        "desc": "钱包类型: WECHAT / ALIPAY / UQRCODEPAY(云闪付) / DCPAY(数币) / BESTPAY(翼支付) / SUNING(苏宁). 受 trans_type 限制: trans_type=41 仅支持 ALIPAY 和 UQRCODEPAY; trans_type=71 仅支持 WECHAT"
       },
       {
         "path": "req_data.trans_type",
         "required": true,
-        "desc": "接入方式: 41=NATIVE(扫码 ALIPAY/银联/京东白条) / 51=JSAPI(微信公众号/银联JS/翼支付) / 61=APP / 71=微信小程序 / 81=H5"
+        "desc": "接入方式 — 三种主流: 41=NATIVE 扫码 (用户扫商户码, 响应 code 是 URL, 客户端转二维码) / 51=JSAPI (微信公众号/支付宝生活号/H5/支付宝小程序/银联JS, 在 App 内直接支付) / 71=微信小程序 (最常用). 其他: 61=APP / 81=H5"
       },
       {
         "path": "req_data.total_amount",
         "required": true,
-        "desc": "金额, 单位: 分"
+        "desc": "金额, 单位: 分 (字符串)"
       },
       {
         "path": "req_data.location_info",
@@ -1426,12 +1426,32 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.location_info.location",
         "required": false,
-        "desc": "纬度经度, 格式 +23.137208/+113.381982"
+        "desc": "纬度/经度, 格式 +23.137208/+113.381982"
+      },
+      {
+        "path": "req_data.acc_busi_fields",
+        "required": false,
+        "desc": "账户端业务信息域 — trans_type=51/71 必填, 不同账户类型字段不同. 微信小程序 (71): sub_appid + sub_openid; 微信公众号 (51): sub_appid + sub_openid; 支付宝 H5/小程序 (51): buyer_id 或 buyer_logon_id. 详见拉卡拉文档"
+      },
+      {
+        "path": "req_data.acc_busi_fields.sub_appid",
+        "required": false,
+        "desc": "[WECHAT, trans_type=51/71] 商户小程序/公众号的 AppID"
+      },
+      {
+        "path": "req_data.acc_busi_fields.sub_openid",
+        "required": false,
+        "desc": "[WECHAT, trans_type=51/71] 用户在该 sub_appid 下的 openid"
+      },
+      {
+        "path": "req_data.acc_busi_fields.buyer_id",
+        "required": false,
+        "desc": "[ALIPAY, trans_type=51] 支付宝买家 user_id (2088 开头)"
       },
       {
         "path": "req_data.busi_mode",
         "required": false,
-        "desc": "业务模式: ACQ-收单"
+        "desc": "业务模式: ACQ-收单 (默认)"
       },
       {
         "path": "req_data.subject",
@@ -1446,7 +1466,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.notify_url",
         "required": false,
-        "desc": "商户通知地址 (支付成功后回调)"
+        "desc": "商户通知地址 (支付成功后异步回调)"
       },
       {
         "path": "req_data.settle_type",
@@ -1462,11 +1482,6 @@ const INLINE_SCHEMAS = {
         "path": "req_data.promo_info",
         "required": false,
         "desc": "拉卡拉优惠相关信息"
-      },
-      {
-        "path": "req_data.acc_busi_fields",
-        "required": false,
-        "desc": "账户端业务信息域, 不同 account_type + trans_type 需要不同子字段 (见拉卡拉文档)"
       },
       {
         "path": "req_data.out_order_no",
@@ -1496,15 +1511,19 @@ const INLINE_SCHEMAS = {
         "merchant_no": "82229007392000A",
         "term_no": "D9296400",
         "out_trade_no": "{{out_trade_no}}",
-        "account_type": "ALIPAY",
-        "trans_type": "41",
+        "account_type": "WECHAT",
+        "trans_type": "71",
         "total_amount": "1",
         "notify_url": "http://example.com/notify",
         "location_info": {
           "request_ip": "192.168.1.1",
           "location": "+23.137208/+113.381982"
         },
-        "subject": "测试订单"
+        "subject": "测试订单",
+        "acc_busi_fields": {
+          "sub_appid": "wx1234567890abcdef",
+          "sub_openid": "ozUVw5_PLACEHOLDER_openid"
+        }
       }
     },
     "response_example": {
@@ -1517,6 +1536,14 @@ const INLINE_SCHEMAS = {
         "trade_no": "2024062666210315450047",
         "log_no": "66210315450047",
         "acc_resp_fields": {
+          "_comment_71": "trans_type=71 (微信小程序) 返回这些字段, 用于客户端拉起小程序支付",
+          "appid": "wx1234567890abcdef",
+          "timestamp": "1719381523",
+          "noncestr": "abcdef...",
+          "package": "prepay_id=wx2624155843...",
+          "signtype": "RSA",
+          "paysign": "...",
+          "_comment_41": "trans_type=41 (扫码) 时 code 是 URL, 转二维码让用户扫",
           "code": "https://qr.alipay.com/...",
           "code_image": ""
         }
