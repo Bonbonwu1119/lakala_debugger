@@ -2461,7 +2461,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "reqData.orgCode",
         "required": true,
-        "desc": "机构代码"
+        "desc": "机构代码. 商户是自己拓客进件产生的 → 1951582; 商户是拉卡拉分配的 → 1"
       },
       {
         "path": "reqData.merInnerNo",
@@ -2471,7 +2471,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "reqData.merCupNo",
         "required": false,
-        "desc": "银联商户号 (与 merInnerNo 至少一个)"
+        "desc": "银联商户号 (就是 82 开头的 merchant_no, 跟 V3 收单接口里那个一致; 与 merInnerNo 至少填一个)"
       },
       {
         "path": "reqData.contactMobile",
@@ -2789,7 +2789,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "reqData.orgCode",
         "required": true,
-        "desc": "分账接收方所属机构代码"
+        "desc": "机构代码. 商户号是自己拓客进件产生的 → 1951582; 商户号是拉卡拉分配的 → 1"
       },
       {
         "path": "reqData.merInnerNo",
@@ -2799,7 +2799,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "reqData.merCupNo",
         "required": true,
-        "desc": "分账商户银联商户号"
+        "desc": "分账商户的银联商户号 (就是 82 开头的 merchant_no, 跟 V3 收单接口里那个一致)"
       },
       {
         "path": "reqData.receiverNo",
