@@ -1357,7 +1357,7 @@ const INLINE_SCHEMAS = {
     "id": "aggregate_active_scan",
     "category": "支付交易类接口",
     "name": "聚合主扫",
-    "description": "聚合主扫接口, 按 trans_type 区分三种主流场景:\n\n  • trans_type=41 (NATIVE 扫码): account_type 只支持 ALIPAY 或 UQRCODEPAY (云闪付). 响应 resp_data.code 是一段 URL, 客户端把 URL 转成二维码让用户用对应 App 扫码完成支付.\n\n  • trans_type=51 (JSAPI): 支持微信公众号 / 支付宝生活号 / 支付宝 H5 应用 / 支付宝小程序 / 银联 JS. 传相应的 acc_busi_fields 域后, 可以直接在微信/支付宝/云闪付 App 内完成支付 (JSAPI 跳起). 微信场景比支付宝常用, 云闪付少见.\n\n  • trans_type=71 (微信小程序, 最常用): 仅支持微信小程序内支付. 传 acc_busi_fields 后在小程序内拉起.\n\n请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签.",
+    "description": "聚合主扫接口, 按 trans_type 区分三种主流场景:\n\n• trans_type=41 (NATIVE 扫码)\n  account_type 只支持 ALIPAY 或 UQRCODEPAY (云闪付).\n  响应 resp_data.code 是一段 URL, 客户端把 URL 转成二维码让用户用对应 App 扫码完成支付.\n\n• trans_type=51 (JSAPI)\n  支持微信公众号 / 支付宝生活号 / 支付宝 H5 / 支付宝小程序 / 银联 JS.\n  传相应 acc_busi_fields 后可直接在对应 App 内完成支付 (JSAPI 跳起).\n  微信场景比支付宝常用, 云闪付少见.\n\n• trans_type=71 (微信小程序, 最常用)\n  仅支持微信小程序内支付. 传 acc_busi_fields 后在小程序内拉起支付.\n\n请求/响应均明文 JSON, 不加密, 仅做 SHA256withRSA 加签/验签.",
     "method": "POST",
     "url_test": "https://test.wsmsd.cn/sit/api/v3/labs/trans/preorder",
     "url_prod": "https://s2.lakala.com/api/v3/labs/trans/preorder",
@@ -1386,7 +1386,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.term_no",
         "required": true,
-        "desc": "终端号 (拉卡拉分配的业务终端)"
+        "desc": "终端号 (拉卡拉分配的业务终端). 测试微信小程序场景使用 D9296381"
       },
       {
         "path": "req_data.out_trade_no",
@@ -1416,7 +1416,7 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.location_info.request_ip",
         "required": true,
-        "desc": "请求方 IP, 必填"
+        "desc": "请求方 IP"
       },
       {
         "path": "req_data.location_info.base_station",
@@ -1431,17 +1431,17 @@ const INLINE_SCHEMAS = {
       {
         "path": "req_data.acc_busi_fields",
         "required": false,
-        "desc": "账户端业务信息域 — trans_type=51/71 必填, 不同账户类型字段不同. 微信小程序 (71): sub_appid + sub_openid; 微信公众号 (51): sub_appid + sub_openid; 支付宝 H5/小程序 (51): buyer_id 或 buyer_logon_id. 详见拉卡拉文档"
+        "desc": "账户端业务信息域 — trans_type=51/71 必填, 不同账户类型字段不同"
       },
       {
         "path": "req_data.acc_busi_fields.sub_appid",
         "required": false,
-        "desc": "[WECHAT, trans_type=51/71] 商户小程序/公众号的 AppID"
+        "desc": "[WECHAT, trans_type=51/71] 商户小程序/公众号的 AppID. 测试值 wxc3e4d1682da3053c"
       },
       {
-        "path": "req_data.acc_busi_fields.sub_openid",
+        "path": "req_data.acc_busi_fields.user_id",
         "required": false,
-        "desc": "[WECHAT, trans_type=51/71] 用户在该 sub_appid 下的 openid"
+        "desc": "[WECHAT, trans_type=51/71] 用户在该 sub_appid 下的 openid. 测试值 oUpF8uICz3Q4J0IN1NYF8E1ier_8"
       },
       {
         "path": "req_data.acc_busi_fields.buyer_id",
@@ -1509,7 +1509,7 @@ const INLINE_SCHEMAS = {
       "version": "3.0",
       "req_data": {
         "merchant_no": "82229007392000A",
-        "term_no": "D9296400",
+        "term_no": "D9296381",
         "out_trade_no": "{{out_trade_no}}",
         "account_type": "WECHAT",
         "trans_type": "71",
@@ -1521,8 +1521,8 @@ const INLINE_SCHEMAS = {
         },
         "subject": "测试订单",
         "acc_busi_fields": {
-          "sub_appid": "wx1234567890abcdef",
-          "sub_openid": "ozUVw5_PLACEHOLDER_openid"
+          "sub_appid": "wxc3e4d1682da3053c",
+          "user_id": "oUpF8uICz3Q4J0IN1NYF8E1ier_8"
         }
       }
     },
@@ -1536,8 +1536,8 @@ const INLINE_SCHEMAS = {
         "trade_no": "2024062666210315450047",
         "log_no": "66210315450047",
         "acc_resp_fields": {
-          "_comment_71": "trans_type=71 (微信小程序) 返回这些字段, 用于客户端拉起小程序支付",
-          "appid": "wx1234567890abcdef",
+          "_comment_71": "trans_type=71 (微信小程序) 返回这些字段, 客户端 wx.requestPayment 直接传入",
+          "appid": "wxc3e4d1682da3053c",
           "timestamp": "1719381523",
           "noncestr": "abcdef...",
           "package": "prepay_id=wx2624155843...",
