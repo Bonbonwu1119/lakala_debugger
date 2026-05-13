@@ -726,6 +726,14 @@ const INLINE_SCHEMAS_INDEX = {
       "name": "分账提现类接口",
       "groups": [
         {
+          "name": "分账开通",
+          "interfaces": [
+            "split_merchant_open",
+            "split_receiver_create",
+            "split_bind"
+          ]
+        },
+        {
           "name": "分账执行",
           "interfaces": [
             "split_balance",
@@ -736,14 +744,6 @@ const INLINE_SCHEMAS_INDEX = {
           "name": "提现",
           "interfaces": [
             "d1_withdraw"
-          ]
-        },
-        {
-          "name": "分账开通",
-          "interfaces": [
-            "split_bind",
-            "split_receiver_create",
-            "split_merchant_open"
           ]
         }
       ]
@@ -2243,6 +2243,437 @@ const INLINE_SCHEMAS = {
       }
     }
   },
+  "split_merchant_open": {
+    "id": "split_merchant_open",
+    "category": "分账提现类接口",
+    "name": "商户分账业务开通申请 (V2)",
+    "description": "商户开通分账业务. 后台人工审核, 可通过查询接口或 retUrl 异步通知获取结果. 必传分账结算授权委托书 (附件需先走文件上传).",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerMer",
+    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerMer",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "reqId",
+        "required": true,
+        "desc": "请求流水号"
+      },
+      {
+        "path": "version",
+        "required": true,
+        "desc": "协议版本号 2.0"
+      },
+      {
+        "path": "reqTime",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "reqData.version",
+        "required": true,
+        "desc": "业务接口版本号 1.0"
+      },
+      {
+        "path": "reqData.orderNo",
+        "required": true,
+        "desc": "订单编号 (用于回调匹配)"
+      },
+      {
+        "path": "reqData.orgCode",
+        "required": true,
+        "desc": "机构代码"
+      },
+      {
+        "path": "reqData.merInnerNo",
+        "required": false,
+        "desc": "拉卡拉内部商户号 (与 merCupNo 至少一个)"
+      },
+      {
+        "path": "reqData.merCupNo",
+        "required": false,
+        "desc": "银联商户号 (与 merInnerNo 至少一个)"
+      },
+      {
+        "path": "reqData.contactMobile",
+        "required": true,
+        "desc": "联系手机号"
+      },
+      {
+        "path": "reqData.splitLowestRatio",
+        "required": true,
+        "desc": "最低分账比例 (百分比, 支持 2 位精度)"
+      },
+      {
+        "path": "reqData.splitEntrustFileName",
+        "required": true,
+        "desc": "分账结算委托书文件名"
+      },
+      {
+        "path": "reqData.splitEntrustFilePath",
+        "required": true,
+        "desc": "分账结算委托书文件路径 (附件上传接口拿)"
+      },
+      {
+        "path": "reqData.retUrl",
+        "required": true,
+        "desc": "审核结果回调地址"
+      },
+      {
+        "path": "reqData.splitRange",
+        "required": false,
+        "desc": "分账范围"
+      },
+      {
+        "path": "reqData.sepFundSource",
+        "required": false,
+        "desc": "分账依据"
+      },
+      {
+        "path": "reqData.eleContractNo",
+        "required": false,
+        "desc": "电子合同编号"
+      },
+      {
+        "path": "reqData.splitLaunchMode",
+        "required": false,
+        "desc": "分账发起方式: AUTO 等"
+      },
+      {
+        "path": "reqData.settleType",
+        "required": false,
+        "desc": "提款类型"
+      },
+      {
+        "path": "reqData.splitRuleSource",
+        "required": false,
+        "desc": "分账规则来源: MER 等"
+      },
+      {
+        "path": "reqData.openWay",
+        "required": false,
+        "desc": "业务开通方式: GENERAL 等"
+      },
+      {
+        "path": "reqData.attachments",
+        "required": false,
+        "desc": "附加资料列表"
+      },
+      {
+        "path": "reqData.returnAcctModel",
+        "required": false,
+        "desc": "退货承担账户模式"
+      },
+      {
+        "path": "reqData.feeRule",
+        "required": false,
+        "desc": "分账计费规则 (arrivalMode/feeRange/feeMode/amount/ratio/feeUpper/feeLower)"
+      }
+    ],
+    "example": {
+      "reqId": "{{req_id}}",
+      "version": "2.0",
+      "reqTime": "{{req_time}}",
+      "reqData": {
+        "version": "1.0",
+        "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
+        "orgCode": "200009",
+        "merInnerNo": "4602025122436325573",
+        "contactMobile": "13800000000",
+        "splitLowestRatio": 94,
+        "splitRange": "ALL",
+        "sepFundSource": "TR",
+        "splitLaunchMode": "AUTO",
+        "splitRuleSource": "MER",
+        "openWay": "GENERAL",
+        "splitEntrustFileName": "授权委托书.pdf",
+        "splitEntrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
+        "retUrl": "https://example.com/ledger/notify",
+        "feeRule": {
+          "arrivalMode": "ALL",
+          "feeRange": "RECEIVER",
+          "feeMode": "RATIO",
+          "ratio": 0.1
+        }
+      }
+    },
+    "response_example": {
+      "retCode": "000000",
+      "retMsg": "申请已受理, 请等待审核结果",
+      "respData": {
+        "version": "1.0",
+        "orderNo": "KFPT...",
+        "orgCode": "1",
+        "applyId": 681001215598657500
+      }
+    }
+  },
+  "split_receiver_create": {
+    "id": "split_receiver_create",
+    "category": "分账提现类接口",
+    "name": "分账接收方创建申请 (V2)",
+    "description": "创建分账接收方. 此接口会认证结算信息和营业执照, 上送数据务必准确. 审核通过后返回 receiverNo (SR 开头) 用于后续分账绑定和分账指令.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerReceiver",
+    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerReceiver",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "reqId",
+        "required": true,
+        "desc": "请求流水号"
+      },
+      {
+        "path": "version",
+        "required": true,
+        "desc": "协议版本号 2.0"
+      },
+      {
+        "path": "reqTime",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "reqData.version",
+        "required": true,
+        "desc": "业务接口版本号 1.0"
+      },
+      {
+        "path": "reqData.orderNo",
+        "required": true,
+        "desc": "订单编号"
+      },
+      {
+        "path": "reqData.orgCode",
+        "required": true,
+        "desc": "机构代码"
+      },
+      {
+        "path": "reqData.receiverName",
+        "required": true,
+        "desc": "分账接收方名称"
+      },
+      {
+        "path": "reqData.contactMobile",
+        "required": true,
+        "desc": "联系手机号"
+      },
+      {
+        "path": "reqData.licenseNo",
+        "required": false,
+        "desc": "营业执照号码"
+      },
+      {
+        "path": "reqData.licenseName",
+        "required": false,
+        "desc": "营业执照名称"
+      },
+      {
+        "path": "reqData.legalPersonName",
+        "required": false,
+        "desc": "法人姓名"
+      },
+      {
+        "path": "reqData.legalPersonCertificateType",
+        "required": false,
+        "desc": "法人证件类型: 17=身份证 / 18=护照 / 19=港澳通行证 / 20=台湾通行证 / 22=港澳居住证 / 23=台湾居住证 / 10=外国人永居证"
+      },
+      {
+        "path": "reqData.legalPersonCertificateNo",
+        "required": false,
+        "desc": "法人证件号"
+      },
+      {
+        "path": "reqData.acctNo",
+        "required": true,
+        "desc": "收款账户卡号"
+      },
+      {
+        "path": "reqData.acctName",
+        "required": true,
+        "desc": "收款账户名称"
+      },
+      {
+        "path": "reqData.acctTypeCode",
+        "required": true,
+        "desc": "收款账户类型代码"
+      },
+      {
+        "path": "reqData.acctCertificateType",
+        "required": true,
+        "desc": "收款账户证件类型 (同 legalPersonCertificateType)"
+      },
+      {
+        "path": "reqData.acctCertificateNo",
+        "required": true,
+        "desc": "收款账户证件号"
+      },
+      {
+        "path": "reqData.acctOpenBankCode",
+        "required": true,
+        "desc": "收款账户开户行号"
+      },
+      {
+        "path": "reqData.acctOpenBankName",
+        "required": true,
+        "desc": "收款账户开户名称"
+      },
+      {
+        "path": "reqData.acctClearBankCode",
+        "required": true,
+        "desc": "收款账户清算行行号"
+      },
+      {
+        "path": "reqData.attachList",
+        "required": false,
+        "desc": "接收方附件资料 (attachType=身份证正面 / BANK_CARD 等, attachName, attachStorePath)"
+      },
+      {
+        "path": "reqData.settleType",
+        "required": false,
+        "desc": "提款类型"
+      },
+      {
+        "path": "reqData.receiverRole",
+        "required": false,
+        "desc": "接收方角色"
+      }
+    ],
+    "example": {
+      "reqId": "{{req_id}}",
+      "version": "2.0",
+      "reqTime": "{{req_time}}",
+      "reqData": {
+        "version": "1.0",
+        "orderNo": "{{out_trade_no}}",
+        "orgCode": "1058036",
+        "receiverName": "分账接收方测试00",
+        "contactMobile": "13728421998",
+        "acctNo": "6222020206116171117",
+        "acctName": "张三",
+        "acctTypeCode": "58",
+        "acctCertificateType": "17",
+        "acctCertificateNo": "340102199003078774",
+        "acctOpenBankCode": "983006000",
+        "acctOpenBankName": "民生银行",
+        "acctClearBankCode": "983006000"
+      }
+    },
+    "response_example": {
+      "retCode": "000000",
+      "retMsg": "分账接收方创建成功",
+      "respData": {
+        "version": "1.0",
+        "orderNo": "...",
+        "orgCode": "1058036",
+        "orgId": "1058036",
+        "orgName": "红星集团",
+        "receiverNo": "SR202302231803"
+      }
+    }
+  },
+  "split_bind": {
+    "id": "split_bind",
+    "category": "分账提现类接口",
+    "name": "分账关系绑定申请 (V2)",
+    "description": "建立分账接收方和分账商户之间的分账关系. V2 协议: 顶层 reqId/version/reqTime/reqData, reqData 内还有业务 version. 异步审核, 审核结果走 retUrl 回调.",
+    "method": "POST",
+    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyBind",
+    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyBind",
+    "doc_url": "https://o.lakala.com/#/home/document/detail",
+    "fields": [
+      {
+        "path": "reqId",
+        "required": true,
+        "desc": "请求流水号"
+      },
+      {
+        "path": "version",
+        "required": true,
+        "desc": "协议版本号 2.0"
+      },
+      {
+        "path": "reqTime",
+        "required": true,
+        "desc": "请求时间 yyyyMMddHHmmss"
+      },
+      {
+        "path": "reqData.version",
+        "required": true,
+        "desc": "业务接口版本号 1.0"
+      },
+      {
+        "path": "reqData.orderNo",
+        "required": true,
+        "desc": "订单编号 (14 位以上, 便于追踪)"
+      },
+      {
+        "path": "reqData.orgCode",
+        "required": true,
+        "desc": "分账接收方所属机构代码"
+      },
+      {
+        "path": "reqData.merInnerNo",
+        "required": true,
+        "desc": "分账商户内部商户号"
+      },
+      {
+        "path": "reqData.merCupNo",
+        "required": true,
+        "desc": "分账商户银联商户号"
+      },
+      {
+        "path": "reqData.receiverNo",
+        "required": true,
+        "desc": "分账接收方编号 (SR 开头)"
+      },
+      {
+        "path": "reqData.entrustFileName",
+        "required": true,
+        "desc": "合作协议附件名称"
+      },
+      {
+        "path": "reqData.entrustFilePath",
+        "required": true,
+        "desc": "合作协议附件路径 (走附件上传接口拿)"
+      },
+      {
+        "path": "reqData.retUrl",
+        "required": true,
+        "desc": "审核结果异步通知地址"
+      },
+      {
+        "path": "reqData.attachments",
+        "required": false,
+        "desc": "附加资料 (attachList: attachType/attachName/attachStorePath)"
+      }
+    ],
+    "example": {
+      "reqId": "{{req_id}}",
+      "version": "2.0",
+      "reqTime": "{{req_time}}",
+      "reqData": {
+        "version": "1.0",
+        "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
+        "orgCode": "200009",
+        "merInnerNo": "4602022021832094453",
+        "merCupNo": "82210005812001PA",
+        "receiverNo": "SR2022021810000",
+        "entrustFileName": "合作协议.pdf",
+        "entrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
+        "retUrl": "https://example.com/ledger/notify"
+      }
+    },
+    "response_example": {
+      "retCode": "000000",
+      "retMsg": "申请已受理",
+      "respData": {
+        "version": "1.0",
+        "orderNo": "...",
+        "orgCode": "200009",
+        "applyId": 548099616395186200
+      }
+    }
+  },
   "split_balance": {
     "id": "split_balance",
     "category": "分账提现类接口",
@@ -2569,437 +3000,6 @@ const INLINE_SCHEMAS = {
       "respData": {
         "drawJnl": "2208161415334262002464",
         "merOrderNo": "..."
-      }
-    }
-  },
-  "split_bind": {
-    "id": "split_bind",
-    "category": "分账提现类接口",
-    "name": "分账关系绑定申请 (V2)",
-    "description": "建立分账接收方和分账商户之间的分账关系. V2 协议: 顶层 reqId/version/reqTime/reqData, reqData 内还有业务 version. 异步审核, 审核结果走 retUrl 回调.",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyBind",
-    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyBind",
-    "doc_url": "https://o.lakala.com/#/home/document/detail",
-    "fields": [
-      {
-        "path": "reqId",
-        "required": true,
-        "desc": "请求流水号"
-      },
-      {
-        "path": "version",
-        "required": true,
-        "desc": "协议版本号 2.0"
-      },
-      {
-        "path": "reqTime",
-        "required": true,
-        "desc": "请求时间 yyyyMMddHHmmss"
-      },
-      {
-        "path": "reqData.version",
-        "required": true,
-        "desc": "业务接口版本号 1.0"
-      },
-      {
-        "path": "reqData.orderNo",
-        "required": true,
-        "desc": "订单编号 (14 位以上, 便于追踪)"
-      },
-      {
-        "path": "reqData.orgCode",
-        "required": true,
-        "desc": "分账接收方所属机构代码"
-      },
-      {
-        "path": "reqData.merInnerNo",
-        "required": true,
-        "desc": "分账商户内部商户号"
-      },
-      {
-        "path": "reqData.merCupNo",
-        "required": true,
-        "desc": "分账商户银联商户号"
-      },
-      {
-        "path": "reqData.receiverNo",
-        "required": true,
-        "desc": "分账接收方编号 (SR 开头)"
-      },
-      {
-        "path": "reqData.entrustFileName",
-        "required": true,
-        "desc": "合作协议附件名称"
-      },
-      {
-        "path": "reqData.entrustFilePath",
-        "required": true,
-        "desc": "合作协议附件路径 (走附件上传接口拿)"
-      },
-      {
-        "path": "reqData.retUrl",
-        "required": true,
-        "desc": "审核结果异步通知地址"
-      },
-      {
-        "path": "reqData.attachments",
-        "required": false,
-        "desc": "附加资料 (attachList: attachType/attachName/attachStorePath)"
-      }
-    ],
-    "example": {
-      "reqId": "{{req_id}}",
-      "version": "2.0",
-      "reqTime": "{{req_time}}",
-      "reqData": {
-        "version": "1.0",
-        "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
-        "orgCode": "200009",
-        "merInnerNo": "4602022021832094453",
-        "merCupNo": "82210005812001PA",
-        "receiverNo": "SR2022021810000",
-        "entrustFileName": "合作协议.pdf",
-        "entrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
-        "retUrl": "https://example.com/ledger/notify"
-      }
-    },
-    "response_example": {
-      "retCode": "000000",
-      "retMsg": "申请已受理",
-      "respData": {
-        "version": "1.0",
-        "orderNo": "...",
-        "orgCode": "200009",
-        "applyId": 548099616395186200
-      }
-    }
-  },
-  "split_receiver_create": {
-    "id": "split_receiver_create",
-    "category": "分账提现类接口",
-    "name": "分账接收方创建申请 (V2)",
-    "description": "创建分账接收方. 此接口会认证结算信息和营业执照, 上送数据务必准确. 审核通过后返回 receiverNo (SR 开头) 用于后续分账绑定和分账指令.",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerReceiver",
-    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerReceiver",
-    "doc_url": "https://o.lakala.com/#/home/document/detail",
-    "fields": [
-      {
-        "path": "reqId",
-        "required": true,
-        "desc": "请求流水号"
-      },
-      {
-        "path": "version",
-        "required": true,
-        "desc": "协议版本号 2.0"
-      },
-      {
-        "path": "reqTime",
-        "required": true,
-        "desc": "请求时间 yyyyMMddHHmmss"
-      },
-      {
-        "path": "reqData.version",
-        "required": true,
-        "desc": "业务接口版本号 1.0"
-      },
-      {
-        "path": "reqData.orderNo",
-        "required": true,
-        "desc": "订单编号"
-      },
-      {
-        "path": "reqData.orgCode",
-        "required": true,
-        "desc": "机构代码"
-      },
-      {
-        "path": "reqData.receiverName",
-        "required": true,
-        "desc": "分账接收方名称"
-      },
-      {
-        "path": "reqData.contactMobile",
-        "required": true,
-        "desc": "联系手机号"
-      },
-      {
-        "path": "reqData.licenseNo",
-        "required": false,
-        "desc": "营业执照号码"
-      },
-      {
-        "path": "reqData.licenseName",
-        "required": false,
-        "desc": "营业执照名称"
-      },
-      {
-        "path": "reqData.legalPersonName",
-        "required": false,
-        "desc": "法人姓名"
-      },
-      {
-        "path": "reqData.legalPersonCertificateType",
-        "required": false,
-        "desc": "法人证件类型: 17=身份证 / 18=护照 / 19=港澳通行证 / 20=台湾通行证 / 22=港澳居住证 / 23=台湾居住证 / 10=外国人永居证"
-      },
-      {
-        "path": "reqData.legalPersonCertificateNo",
-        "required": false,
-        "desc": "法人证件号"
-      },
-      {
-        "path": "reqData.acctNo",
-        "required": true,
-        "desc": "收款账户卡号"
-      },
-      {
-        "path": "reqData.acctName",
-        "required": true,
-        "desc": "收款账户名称"
-      },
-      {
-        "path": "reqData.acctTypeCode",
-        "required": true,
-        "desc": "收款账户类型代码"
-      },
-      {
-        "path": "reqData.acctCertificateType",
-        "required": true,
-        "desc": "收款账户证件类型 (同 legalPersonCertificateType)"
-      },
-      {
-        "path": "reqData.acctCertificateNo",
-        "required": true,
-        "desc": "收款账户证件号"
-      },
-      {
-        "path": "reqData.acctOpenBankCode",
-        "required": true,
-        "desc": "收款账户开户行号"
-      },
-      {
-        "path": "reqData.acctOpenBankName",
-        "required": true,
-        "desc": "收款账户开户名称"
-      },
-      {
-        "path": "reqData.acctClearBankCode",
-        "required": true,
-        "desc": "收款账户清算行行号"
-      },
-      {
-        "path": "reqData.attachList",
-        "required": false,
-        "desc": "接收方附件资料 (attachType=身份证正面 / BANK_CARD 等, attachName, attachStorePath)"
-      },
-      {
-        "path": "reqData.settleType",
-        "required": false,
-        "desc": "提款类型"
-      },
-      {
-        "path": "reqData.receiverRole",
-        "required": false,
-        "desc": "接收方角色"
-      }
-    ],
-    "example": {
-      "reqId": "{{req_id}}",
-      "version": "2.0",
-      "reqTime": "{{req_time}}",
-      "reqData": {
-        "version": "1.0",
-        "orderNo": "{{out_trade_no}}",
-        "orgCode": "1058036",
-        "receiverName": "分账接收方测试00",
-        "contactMobile": "13728421998",
-        "acctNo": "6222020206116171117",
-        "acctName": "张三",
-        "acctTypeCode": "58",
-        "acctCertificateType": "17",
-        "acctCertificateNo": "340102199003078774",
-        "acctOpenBankCode": "983006000",
-        "acctOpenBankName": "民生银行",
-        "acctClearBankCode": "983006000"
-      }
-    },
-    "response_example": {
-      "retCode": "000000",
-      "retMsg": "分账接收方创建成功",
-      "respData": {
-        "version": "1.0",
-        "orderNo": "...",
-        "orgCode": "1058036",
-        "orgId": "1058036",
-        "orgName": "红星集团",
-        "receiverNo": "SR202302231803"
-      }
-    }
-  },
-  "split_merchant_open": {
-    "id": "split_merchant_open",
-    "category": "分账提现类接口",
-    "name": "商户分账业务开通申请 (V2)",
-    "description": "商户开通分账业务. 后台人工审核, 可通过查询接口或 retUrl 异步通知获取结果. 必传分账结算授权委托书 (附件需先走文件上传).",
-    "method": "POST",
-    "url_test": "https://test.wsmsd.cn/sit/api/v2/mms/openApi/ledger/applyLedgerMer",
-    "url_prod": "https://s2.lakala.com/api/v2/mms/openApi/ledger/applyLedgerMer",
-    "doc_url": "https://o.lakala.com/#/home/document/detail",
-    "fields": [
-      {
-        "path": "reqId",
-        "required": true,
-        "desc": "请求流水号"
-      },
-      {
-        "path": "version",
-        "required": true,
-        "desc": "协议版本号 2.0"
-      },
-      {
-        "path": "reqTime",
-        "required": true,
-        "desc": "请求时间 yyyyMMddHHmmss"
-      },
-      {
-        "path": "reqData.version",
-        "required": true,
-        "desc": "业务接口版本号 1.0"
-      },
-      {
-        "path": "reqData.orderNo",
-        "required": true,
-        "desc": "订单编号 (用于回调匹配)"
-      },
-      {
-        "path": "reqData.orgCode",
-        "required": true,
-        "desc": "机构代码"
-      },
-      {
-        "path": "reqData.merInnerNo",
-        "required": false,
-        "desc": "拉卡拉内部商户号 (与 merCupNo 至少一个)"
-      },
-      {
-        "path": "reqData.merCupNo",
-        "required": false,
-        "desc": "银联商户号 (与 merInnerNo 至少一个)"
-      },
-      {
-        "path": "reqData.contactMobile",
-        "required": true,
-        "desc": "联系手机号"
-      },
-      {
-        "path": "reqData.splitLowestRatio",
-        "required": true,
-        "desc": "最低分账比例 (百分比, 支持 2 位精度)"
-      },
-      {
-        "path": "reqData.splitEntrustFileName",
-        "required": true,
-        "desc": "分账结算委托书文件名"
-      },
-      {
-        "path": "reqData.splitEntrustFilePath",
-        "required": true,
-        "desc": "分账结算委托书文件路径 (附件上传接口拿)"
-      },
-      {
-        "path": "reqData.retUrl",
-        "required": true,
-        "desc": "审核结果回调地址"
-      },
-      {
-        "path": "reqData.splitRange",
-        "required": false,
-        "desc": "分账范围"
-      },
-      {
-        "path": "reqData.sepFundSource",
-        "required": false,
-        "desc": "分账依据"
-      },
-      {
-        "path": "reqData.eleContractNo",
-        "required": false,
-        "desc": "电子合同编号"
-      },
-      {
-        "path": "reqData.splitLaunchMode",
-        "required": false,
-        "desc": "分账发起方式: AUTO 等"
-      },
-      {
-        "path": "reqData.settleType",
-        "required": false,
-        "desc": "提款类型"
-      },
-      {
-        "path": "reqData.splitRuleSource",
-        "required": false,
-        "desc": "分账规则来源: MER 等"
-      },
-      {
-        "path": "reqData.openWay",
-        "required": false,
-        "desc": "业务开通方式: GENERAL 等"
-      },
-      {
-        "path": "reqData.attachments",
-        "required": false,
-        "desc": "附加资料列表"
-      },
-      {
-        "path": "reqData.returnAcctModel",
-        "required": false,
-        "desc": "退货承担账户模式"
-      },
-      {
-        "path": "reqData.feeRule",
-        "required": false,
-        "desc": "分账计费规则 (arrivalMode/feeRange/feeMode/amount/ratio/feeUpper/feeLower)"
-      }
-    ],
-    "example": {
-      "reqId": "{{req_id}}",
-      "version": "2.0",
-      "reqTime": "{{req_time}}",
-      "reqData": {
-        "version": "1.0",
-        "orderNo": "NEWRETAILSPLIT{{out_trade_no}}",
-        "orgCode": "200009",
-        "merInnerNo": "4602025122436325573",
-        "contactMobile": "13800000000",
-        "splitLowestRatio": 94,
-        "splitRange": "ALL",
-        "sepFundSource": "TR",
-        "splitLaunchMode": "AUTO",
-        "splitRuleSource": "MER",
-        "openWay": "GENERAL",
-        "splitEntrustFileName": "授权委托书.pdf",
-        "splitEntrustFilePath": "G1/M00/00/16/CrFdE16wGu6AHwGQAAAz1tt01uo194.jpg",
-        "retUrl": "https://example.com/ledger/notify",
-        "feeRule": {
-          "arrivalMode": "ALL",
-          "feeRange": "RECEIVER",
-          "feeMode": "RATIO",
-          "ratio": 0.1
-        }
-      }
-    },
-    "response_example": {
-      "retCode": "000000",
-      "retMsg": "申请已受理, 请等待审核结果",
-      "respData": {
-        "version": "1.0",
-        "orderNo": "KFPT...",
-        "orgCode": "1",
-        "applyId": 681001215598657500
       }
     }
   },
