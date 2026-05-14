@@ -1,0 +1,12 @@
+# .NET 编译产物
+bin/
+obj/
+
+# Visual Studio / Rider 配置
+.vs/
+.idea/
+*.user
+
+# NuGet
+*.nupkg
+packages/
