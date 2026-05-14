@@ -29,3 +29,8 @@ _pdf_ocr_out/
 .DS_Store
 Thumbs.db
 *.log
+
+# 解压时残留的 macOS 元数据 / 客户原始 zip
+__MACOSX/
+Csharp.zip
+*.cer.zip
