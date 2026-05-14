@@ -34,3 +34,6 @@ Thumbs.db
 __MACOSX/
 Csharp.zip
 *.cer.zip
+
+# C# DEMO (独立分发, 不属于网站项目 - 通过 dist/release/lakala-csharp-demo-*.zip 单独发)
+Csharp/
