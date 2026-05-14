@@ -185,7 +185,26 @@ Console.WriteLine("【演示 5】完整调用 — 聚合被扫 (/api/v3/labs/tra
         Console.WriteLine($"  响应验签:   {(result.SignatureChecked
                                               ? (result.SignatureValid ? "✓ 通过 (LakalaHelper.VerifyResponseSignature 自动验)" : "✗ 失败 " + result.SignatureError)
                                               : "(响应里无 Lklapi-Signature, 跳过验签)")}");
-        Console.WriteLine($"  响应 Body:  {result.ResponseBody}");
+
+        // 智能分析响应类型, 不要刷屏 HTML
+        var body = result.ResponseBody?.TrimStart() ?? "";
+        if (body.StartsWith("<") || body.Contains("<!DOCTYPE"))
+        {
+            Console.WriteLine($"  响应类型:   ⚠ HTML 错误页 (不是 JSON), {body.Length} 字符");
+            Console.WriteLine($"  原因诊断:   被网关 WAF 拦截或返回 405 等错误. 通常是:");
+            Console.WriteLine($"               1) 出口 IP 触发风控 (如海外 / 数据中心 IP, test.wsmsd.cn 限制境外)");
+            Console.WriteLine($"               2) 请求 body 里的字段值触发 WAF 规则 (如 location 里有 / 等特殊字符)");
+            Console.WriteLine($"               3) auth_code 不是真实有效的付款码");
+            Console.WriteLine($"  响应预览:   {body[..Math.Min(120, body.Length)]}...");
+        }
+        else if (body.StartsWith("{") || body.StartsWith("["))
+        {
+            Console.WriteLine($"  响应 Body:  {body}");
+        }
+        else
+        {
+            Console.WriteLine($"  响应 Body:  {body[..Math.Min(200, body.Length)]}");
+        }
     }
     catch (HttpRequestException e)
     {
